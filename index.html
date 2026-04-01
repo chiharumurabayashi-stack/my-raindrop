@@ -84,7 +84,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .status-dot.error{background:#ef4444}
 
 /* Tags sidebar */
-.tag-list{padding:0 12px;display:flex;flex-wrap:wrap;gap:4px;max-height:100px;overflow-y:auto}
+.tag-list{padding:0 12px;display:flex;flex-wrap:wrap;gap:4px;flex:1;overflow-y:auto;align-content:flex-start}
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -147,8 +147,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 
     <div class="sidebar-label" style="margin-top:8px">タグ</div>
     <div class="tag-list" id="tag-list"></div>
-
-    <div class="sidebar-spacer"></div>
 
     <div class="sidebar-bottom">
       <button class="btn btn-sm btn-block" onclick="exportJSON()">📥 JSONエクスポート</button>
