@@ -501,36 +501,44 @@ async function fetchMissingThumbs() {
   let updated = false;
   for (const b of targets) {
     try {
-      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(b.url)}`);
-      const json = await res.json();
-      const image = json?.data?.image?.url || json?.data?.screenshot?.url;
-      // OGP画像が取れればそれを、なければファビコンをフォールバックとして使う
-      b.thumb = image || faviconUrl(b.url) || '🌐';
+      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(b.url)}`);
+      const data = await res.json();
+      const html = data.contents || '';
+      const ogImg = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+                 || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+      b.thumb = ogImg?.[1] || faviconUrl(b.url) || '🌐';
       updated = true;
       renderCards();
     } catch(e) {
-      // microlink失敗時もファビコンで補完
       b.thumb = faviconUrl(b.url) || '🌐';
       updated = true;
       renderCards();
     }
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 200));
   }
   if (updated) await saveToFirestore();
 }
 
 async function fetchTitle(url) {
   document.getElementById('title-fetching').style.display = 'inline';
-  pendingThumb = null;
+  pendingThumb = faviconUrl(url);
   try {
-    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
-    const json = await res.json();
-    const title = json?.data?.title;
-    const image = json?.data?.image?.url || json?.data?.screenshot?.url;
-    if (title && !document.getElementById('f-title').value) {
-      document.getElementById('f-title').value = title;
+    // HTMLを直接取得してtitleとOGP画像をパース（rate limit なし）
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    const html = data.contents || '';
+
+    // <title> タグ
+    const titleMatch = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
+    if (titleMatch && !document.getElementById('f-title').value) {
+      document.getElementById('f-title').value = titleMatch[1].trim();
     }
-    pendingThumb = image || faviconUrl(url);
+
+    // OGP画像 (og:image)
+    const ogImg = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+               || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    if (ogImg?.[1]) pendingThumb = ogImg[1];
+
   } catch(e) {
     pendingThumb = faviconUrl(url);
   } finally {
