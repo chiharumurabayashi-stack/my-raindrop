@@ -31,6 +31,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .sidebar-item:hover{background:#f0f0ee}
 .sidebar-item.active{background:#f0f0ee;color:#1a1a1a;font-weight:500}
 .sidebar-item .count{margin-left:auto;font-size:11px;color:#bbb}
+.sidebar-item .col-actions{display:none;gap:2px;margin-left:4px}
+.sidebar-item:hover .col-actions{display:flex}
+.sidebar-item:hover .count{display:none}
+.col-btn{width:20px;height:20px;border:none;background:transparent;cursor:pointer;font-size:11px;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0}
+.col-btn:hover{background:rgba(0,0,0,0.08)}
 .sidebar-spacer{flex:1}
 .sidebar-bottom{padding:8px 12px;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:8px}
 
@@ -178,12 +183,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 <!-- コレクション追加モーダル -->
 <div id="modal-col" class="modal-bg" style="display:none">
   <div class="modal">
-    <h3>新しいコレクション</h3>
+    <h3 id="modal-col-title">新しいコレクション</h3>
     <div class="field"><label>名前</label><input id="f-col-name" type="text" placeholder="例: デザイン参考"></div>
     <div class="field"><label>アイコン（絵文字）</label><input id="f-col-icon" type="text" placeholder="🎨" maxlength="2"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-col')">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveCollection()">作成</button>
+      <button class="btn btn-primary" onclick="saveCollection()">保存</button>
     </div>
   </div>
 </div>
@@ -341,10 +346,16 @@ function renderSidebar() {
   const list = document.getElementById('collection-list');
   list.innerHTML = state.collections.map(c => {
     const cnt = c.id === 'all' ? state.bookmarks.length : state.bookmarks.filter(b => b.collection === c.id).length;
+    const actions = c.id !== 'all' ? `
+      <span class="col-actions">
+        <button class="col-btn" onclick="event.stopPropagation();openEditCollection('${c.id}')" title="編集">✏️</button>
+        <button class="col-btn" onclick="event.stopPropagation();deleteCollection('${c.id}')" title="削除">🗑</button>
+      </span>` : '';
     return `<div class="sidebar-item${state.activeCollection === c.id && !state.activeTag ? ' active' : ''}" onclick="setCollection('${c.id}')">
       <span style="font-size:14px">${c.icon}</span>
       <span>${c.name}</span>
       <span class="count">${cnt}</span>
+      ${actions}
     </div>`;
   }).join('');
 
@@ -501,9 +512,23 @@ async function deleteBookmark(id) {
   await saveToFirestore();
 }
 
+let editingCollectionId = null;
+
 function openAddCollection() {
+  editingCollectionId = null;
+  document.getElementById('modal-col-title').textContent = '新しいコレクション';
   document.getElementById('f-col-name').value = '';
   document.getElementById('f-col-icon').value = '';
+  document.getElementById('modal-col').style.display = 'flex';
+}
+
+function openEditCollection(id) {
+  const c = state.collections.find(x => x.id === id);
+  if (!c) return;
+  editingCollectionId = id;
+  document.getElementById('modal-col-title').textContent = 'コレクションを編集';
+  document.getElementById('f-col-name').value = c.name;
+  document.getElementById('f-col-icon').value = c.icon;
   document.getElementById('modal-col').style.display = 'flex';
 }
 
@@ -511,9 +536,35 @@ async function saveCollection() {
   const name = document.getElementById('f-col-name').value.trim();
   const icon = document.getElementById('f-col-icon').value.trim() || '📁';
   if (!name) return;
-  state.collections.push({ id: name, name, icon });
+  if (editingCollectionId) {
+    const c = state.collections.find(x => x.id === editingCollectionId);
+    if (c) {
+      // ブックマークの collection 参照も更新
+      state.bookmarks.forEach(b => { if (b.collection === c.id) b.collection = name; });
+      Object.assign(c, { id: name, name, icon });
+    }
+  } else {
+    state.collections.push({ id: name, name, icon });
+  }
   closeModal('modal-col');
   renderSidebar();
+  renderCards();
+  await saveToFirestore();
+}
+
+async function deleteCollection(id) {
+  const c = state.collections.find(x => x.id === id);
+  if (!c) return;
+  const cnt = state.bookmarks.filter(b => b.collection === id).length;
+  const msg = cnt > 0
+    ? `「${c.name}」を削除しますか？\n（このコレクションのブックマーク ${cnt} 件は「未分類」になります）`
+    : `「${c.name}」を削除しますか？`;
+  if (!confirm(msg)) return;
+  state.bookmarks.forEach(b => { if (b.collection === id) b.collection = ''; });
+  state.collections = state.collections.filter(x => x.id !== id);
+  if (state.activeCollection === id) state.activeCollection = 'all';
+  renderSidebar();
+  renderCards();
   await saveToFirestore();
 }
 
