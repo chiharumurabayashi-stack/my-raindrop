@@ -751,6 +751,7 @@ let ctxTargetTag = null;
 
 function openCtxMenu(event, tag) {
   event.preventDefault();
+  event.stopPropagation();
   ctxTargetTag = tag;
   const menu = document.getElementById('ctx-menu');
   menu.style.display = 'block';
