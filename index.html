@@ -375,7 +375,10 @@ function renderCards() {
         <button class="card-action-btn" onclick="openEdit(${b.id})" title="編集">✏️</button>
         <button class="card-action-btn danger" onclick="deleteBookmark(${b.id})" title="削除">🗑</button>
       </div>
-      <div class="card-thumb">${b.thumb || '🌐'}</div>
+      <div class="card-thumb">${b.thumb && b.thumb.startsWith('http')
+        ? `<img src="${b.thumb}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='🌐'">`
+        : `<span style="font-size:32px">${b.thumb || '🌐'}</span>`
+      }</div>
       <div class="card-body">
         <div class="card-title" title="${b.title}">${b.title}</div>
         <div class="card-url">${b.url.replace(/^https?:\/\//, '').split('/')[0]}</div>
@@ -398,15 +401,20 @@ function onUrlInput() {
   fetchTimer = setTimeout(() => fetchTitle(url), 600);
 }
 
+let pendingThumb = null;
+
 async function fetchTitle(url) {
   document.getElementById('title-fetching').style.display = 'inline';
+  pendingThumb = null;
   try {
     const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
     const json = await res.json();
     const title = json?.data?.title;
+    const image = json?.data?.image?.url || json?.data?.screenshot?.url;
     if (title && !document.getElementById('f-title').value) {
       document.getElementById('f-title').value = title;
     }
+    if (image) pendingThumb = image;
   } catch(e) {
     // 取得失敗は無視（手動入力で対応）
   } finally {
@@ -453,7 +461,8 @@ async function saveBookmark() {
     const b = state.bookmarks.find(x => x.id === state.editingId);
     if (b) Object.assign(b, { url, title, collection: col, tags });
   } else {
-    state.bookmarks.push({ id: Date.now(), url, title, collection: col, tags, thumb: randEmoji() });
+    state.bookmarks.push({ id: Date.now(), url, title, collection: col, tags, thumb: pendingThumb || randEmoji() });
+    pendingThumb = null;
   }
   closeModal('modal-add');
   renderSidebar();
