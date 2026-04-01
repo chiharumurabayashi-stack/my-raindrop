@@ -501,7 +501,7 @@ function openAddModal() {
   document.getElementById('title-fetching').style.display = 'none';
   const sel = document.getElementById('f-col');
   sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
-    `<option value="${c.id}">${c.name}</option>`
+    `<option value="${c.id}"${c.id === state.activeCollection ? ' selected' : ''}>${c.name}</option>`
   ).join('');
   document.getElementById('modal-add').style.display = 'flex';
 }
