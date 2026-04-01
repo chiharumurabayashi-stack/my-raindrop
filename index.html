@@ -85,11 +85,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 
 /* Tags sidebar */
 .tag-list{padding:0 8px 0 12px;display:flex;flex-wrap:wrap;gap:4px;flex:1;overflow-y:auto;align-content:flex-start}
-.tag-item{display:inline-flex;align-items:center;gap:1px}
-.tag-item:hover .tag-item-actions{display:flex}
-.tag-item-actions{display:none;gap:1px}
-.tag-item-btn{width:15px;height:15px;border:none;background:transparent;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;border-radius:3px;padding:0;opacity:0.6}
-.tag-item-btn:hover{background:rgba(0,0,0,0.08);opacity:1}
+/* Context menu */
+.ctx-menu{position:fixed;background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:4px;z-index:1000;min-width:140px;display:none}
+.ctx-menu-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:#1a1a1a}
+.ctx-menu-item:hover{background:#f0f0ee}
+.ctx-menu-item.danger{color:#e53e3e}
+.ctx-menu-item.danger:hover{background:#fff0f0}
+.ctx-menu-sep{height:0.5px;background:rgba(0,0,0,0.08);margin:3px 0}
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -203,6 +205,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <button class="btn btn-primary" onclick="saveBookmark()">保存</button>
     </div>
   </div>
+</div>
+
+<!-- 右クリックコンテキストメニュー -->
+<div id="ctx-menu" class="ctx-menu">
+  <div class="ctx-menu-item" onclick="ctxRename()">✏️ 名前の変更</div>
+  <div class="ctx-menu-sep"></div>
+  <div class="ctx-menu-item danger" onclick="ctxDelete()">🗑 削除</div>
 </div>
 
 <!-- タグ編集モーダル -->
@@ -403,13 +412,9 @@ function renderSidebar() {
   const tagMap = {};
   state.bookmarks.forEach(b => (b.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; }));
   document.getElementById('tag-list').innerHTML = Object.keys(tagMap).sort().map(t =>
-    `<span class="tag-item">
-      <span class="tag" style="${state.activeTag === t ? 'outline:1.5px solid #1a56db' : ''}" onclick="setTag('${tagEsc(t)}')">${tagEsc(t)}</span>
-      <span class="tag-item-actions">
-        <button class="tag-item-btn" onclick="openTagRename('${tagEsc(t)}')" title="名前変更">✏️</button>
-        <button class="tag-item-btn" onclick="deleteTag('${tagEsc(t)}')" title="削除">🗑</button>
-      </span>
-    </span>`
+    `<span class="tag" style="${state.activeTag === t ? 'outline:1.5px solid #1a56db' : ''}"
+      onclick="setTag('${tagEsc(t)}')"
+      oncontextmenu="openCtxMenu(event,'${tagEsc(t)}')">${tagEsc(t)}</span>`
   ).join('');
 }
 
@@ -740,6 +745,42 @@ async function deleteCollection(id) {
   renderCards();
   await saveToFirestore();
 }
+
+// ========== コンテキストメニュー ==========
+let ctxTargetTag = null;
+
+function openCtxMenu(event, tag) {
+  event.preventDefault();
+  ctxTargetTag = tag;
+  const menu = document.getElementById('ctx-menu');
+  menu.style.display = 'block';
+  const x = Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 8);
+  const y = Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 8);
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+}
+
+function closeCtxMenu() {
+  document.getElementById('ctx-menu').style.display = 'none';
+  ctxTargetTag = null;
+}
+
+function ctxRename() {
+  const tag = ctxTargetTag;
+  closeCtxMenu();
+  if (tag) openTagRename(tag);
+}
+
+function ctxDelete() {
+  const tag = ctxTargetTag;
+  closeCtxMenu();
+  if (tag) deleteTag(tag);
+}
+
+document.addEventListener('click', () => closeCtxMenu());
+document.addEventListener('contextmenu', e => {
+  if (!e.target.closest('#ctx-menu')) closeCtxMenu();
+});
 
 // ========== タグ管理 ==========
 let editingTagName = null;
