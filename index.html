@@ -286,6 +286,7 @@ function startSync() {
       document.getElementById('last-saved').textContent =
         data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleTimeString('ja-JP') : '';
       setStatus('クラウドに同期済み ☁️', 'synced');
+      fetchMissingThumbs();
     } else {
       // 初回：サンプルデータを書き込む
       state.bookmarks = [
@@ -402,6 +403,28 @@ function onUrlInput() {
 }
 
 let pendingThumb = null;
+
+// ========== 既存ブックマークのサムネイル自動取得 ==========
+async function fetchMissingThumbs() {
+  const targets = state.bookmarks.filter(b => !b.thumb || !b.thumb.startsWith('http'));
+  if (!targets.length) return;
+
+  let updated = false;
+  for (const b of targets) {
+    try {
+      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(b.url)}`);
+      const json = await res.json();
+      const image = json?.data?.image?.url || json?.data?.screenshot?.url;
+      if (image) {
+        b.thumb = image;
+        updated = true;
+        renderCards(); // 1件取得するたびに即反映
+      }
+    } catch(e) { /* 失敗は無視 */ }
+    await new Promise(r => setTimeout(r, 300)); // API負荷を下げるため少し間隔を空ける
+  }
+  if (updated) await saveToFirestore();
+}
 
 async function fetchTitle(url) {
   document.getElementById('title-fetching').style.display = 'inline';
