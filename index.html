@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyRaindrop — ブックマークマネージャー</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyRaindrop">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3}
+.app{display:flex;height:100vh;background:#f5f5f3}
+
+/* Sidebar */
+.sidebar{width:220px;min-width:220px;background:#fff;border-right:0.5px solid rgba(0,0,0,0.1);display:flex;flex-direction:column;padding:12px 0}
+.sidebar-logo{padding:12px 16px 8px;display:flex;align-items:center;gap:8px;font-weight:500;font-size:15px}
+.sidebar-label{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.06em;padding:8px 12px 4px}
+.sidebar-item{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:#555;transition:background 0.1s;margin:0 4px}
+.sidebar-item:hover{background:#f0f0ee}
+.sidebar-item.active{background:#f0f0ee;color:#1a1a1a;font-weight:500}
+.sidebar-item .count{margin-left:auto;font-size:11px;color:#bbb}
+.sidebar-spacer{flex:1}
+.sidebar-bottom{padding:8px 12px;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:8px}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.search-wrap{flex:1;position:relative}
+.search-wrap input{width:100%;padding:7px 12px 7px 32px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f5f5f3;font-size:13px;color:#1a1a1a;outline:none}
+.search-wrap input:focus{border-color:rgba(0,0,0,0.3);background:#fff}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#aaa;font-size:13px}
+.content{flex:1;overflow-y:auto;padding:16px}
+
+/* Buttons */
+.btn{padding:7px 14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:transparent;font-size:13px;color:#1a1a1a;cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn:hover{background:#f0f0ee}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover{background:#333;opacity:1}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-block{width:100%;margin-bottom:6px}
+
+/* Cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;overflow:hidden;position:relative;transition:border-color 0.15s}
+.card:hover{border-color:rgba(0,0,0,0.25)}
+.card-actions{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s}
+.card:hover .card-actions{opacity:1}
+.card-action-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
+.card-action-btn:hover{background:#f0f0ee}
+.card-action-btn.danger:hover{background:#fff0f0}
+.card-thumb{height:110px;background:#f5f5f3;display:flex;align-items:center;justify-content:center;font-size:32px}
+.card-body{padding:10px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-url{font-size:11px;color:#aaa;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11px;padding:2px 7px;border-radius:99px;background:#e8f0fe;color:#1a56db;cursor:pointer}
+.tag:hover{background:#d0e2fd}
+.card-open-link{font-size:11px;color:#1a56db;text-decoration:none;display:inline-block;margin-top:8px}
+
+/* Status bar */
+.status-bar{background:#f5f5f3;border-top:0.5px solid rgba(0,0,0,0.08);padding:8px 16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#888}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#4CAF50;flex-shrink:0}
+
+/* Tags sidebar */
+.tag-list{padding:0 12px;display:flex;flex-wrap:wrap;gap:4px;max-height:100px;overflow-y:auto}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:#fff;border-radius:12px;padding:24px;width:420px;max-width:90vw;border:0.5px solid rgba(0,0,0,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.12)}
+.modal h3{font-size:16px;font-weight:500;margin-bottom:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:#666;margin-bottom:5px}
+.field input,.field select{width:100%;padding:8px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f5f5f3;font-size:13px;color:#1a1a1a;outline:none;font-family:inherit}
+.field input:focus,.field select:focus{border-color:rgba(0,0,0,0.35);background:#fff}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+
+.empty{text-align:center;padding:48px 16px;color:#bbb;grid-column:1/-1}
+.empty .emoji{font-size:32px;margin-bottom:10px}
+
+/* Google Drive Note */
+.gdrive-note{background:#fffbeb;border:0.5px solid #f59e0b;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:14px;line-height:1.6}
+
+/* PWA install banner */
+#install-banner{display:none;background:#1a1a1a;color:#fff;padding:10px 16px;font-size:13px;align-items:center;gap:10px;justify-content:space-between}
+#install-banner button{padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:12px}
+#install-banner button.primary{background:#fff;color:#1a1a1a}
+
+/* モバイル対応 */
+@media (max-width: 600px) {
+  .sidebar{display:none}
+  .grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="install-banner">
+  <span>📲 ホーム画面に追加してアプリとして使えます</span>
+  <div style="display:flex;gap:8px">
+    <button onclick="dismissInstall()">後で</button>
+    <button class="primary" onclick="installPWA()">追加する</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+      MyRaindrop
+    </div>
+
+    <div class="sidebar-label">コレクション</div>
+    <div id="collection-list"></div>
+    <div style="padding:4px 12px;margin-top:4px">
+      <button class="btn btn-sm btn-block" onclick="openAddCollection()">+ 新しいコレクション</button>
+    </div>
+
+    <div class="sidebar-label" style="margin-top:8px">タグ</div>
+    <div class="tag-list" id="tag-list"></div>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-bottom">
+      <button class="btn btn-sm btn-block" onclick="exportJSON()">📥 JSONエクスポート</button>
+      <button class="btn btn-sm btn-block" onclick="document.getElementById('import-file').click()">📤 JSONインポート</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+      <div style="margin-top:8px;padding-top:8px;border-top:0.5px solid rgba(0,0,0,0.08)">
+        <div style="font-size:11px;color:#aaa;margin-bottom:6px">Google Drive連携はホスティング後に有効になります</div>
+        <button class="btn btn-sm btn-block" onclick="saveToGDrive()">☁️ Driveへ保存</button>
+        <button class="btn btn-sm btn-block" onclick="loadFromGDrive()">☁️ Driveから読み込む</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="ブックマークを検索..." id="search-input" oninput="renderCards()">
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ 追加</button>
+    </div>
+    <div class="content">
+      <div class="grid" id="card-grid"></div>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">ローカルストレージを使用中</span>
+      <span style="margin-left:auto" id="last-saved"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ブックマーク追加・編集モーダル -->
+<div id="modal-add" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3 id="modal-title">ブックマークを追加</h3>
+    <div class="field"><label>URL</label><input id="f-url" type="url" placeholder="https://example.com"></div>
+    <div class="field"><label>タイトル</label><input id="f-title" type="text" placeholder="サイト名"></div>
+    <div class="field"><label>コレクション</label><select id="f-col"></select></div>
+    <div class="field"><label>タグ（カンマ区切り）</label><input id="f-tags" type="text" placeholder="design, tool, news"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-add')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveBookmark()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- コレクション追加モーダル -->
+<div id="modal-col" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>新しいコレクション</h3>
+    <div class="field"><label>名前</label><input id="f-col-name" type="text" placeholder="例: デザイン参考"></div>
+    <div class="field"><label>アイコン（絵文字）</label><input id="f-col-icon" type="text" placeholder="🎨" maxlength="2"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-col')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCollection()">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Google Drive モーダル -->
+<div id="modal-gdrive" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3 id="gdrive-modal-title">Googleドライブへ保存</h3>
+    <div class="gdrive-note" id="gdrive-note"></div>
+    <div id="gdrive-loading" style="text-align:center;padding:16px;display:none">
+      <p style="color:#888;font-size:13px">処理中...</p>
+    </div>
+    <div id="gdrive-result" style="display:none;padding:10px;background:#f5f5f3;border-radius:8px;font-size:13px"></div>
+    <div class="modal-actions" id="gdrive-actions">
+      <button class="btn" onclick="closeModal('modal-gdrive')">閉じる</button>
+      <button class="btn btn-primary" id="gdrive-confirm-btn" style="display:none">実行</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 定数 ==========
+const EMOJIS = ['🌐','📰','🎨','🛠','📺','🎵','📚','🎮','💡','🏷','🔗','⭐'];
+const STORAGE_KEY = 'myraindrop_data';
+const IS_HOSTED = location.protocol === 'https:' && !location.hostname.includes('claude');
+
+function randEmoji() { return EMOJIS[Math.floor(Math.random() * EMOJIS.length)]; }
+
+// ========== 状態 ==========
+let state = {
+  bookmarks: [],
+  collections: [{ id: 'all', name: 'すべて', icon: '📌' }],
+  activeCollection: 'all',
+  activeTag: null,
+  editingId: null,
+};
+
+// ========== ローカルストレージ ==========
+function loadLocal() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.bookmarks) state.bookmarks = data.bookmarks;
+      if (data.collections) state.collections = data.collections;
+      document.getElementById('status-text').textContent = 'ローカルストレージから読み込み済み';
+    } else {
+      state.bookmarks = [
+        { id: 1, url: 'https://anthropic.com', title: 'Anthropic', collection: 'Tech', tags: ['AI', 'tool'], thumb: '🤖' },
+        { id: 2, url: 'https://figma.com', title: 'Figma', collection: 'Design', tags: ['design', 'tool'], thumb: '🎨' },
+        { id: 3, url: 'https://github.com', title: 'GitHub', collection: 'Tech', tags: ['code', 'dev'], thumb: '💻' },
+        { id: 4, url: 'https://zenn.dev', title: 'Zenn', collection: '読み物', tags: ['tech', 'blog'], thumb: '📰' },
+      ];
+      state.collections = [
+        { id: 'all', name: 'すべて', icon: '📌' },
+        { id: 'Tech', name: 'Tech', icon: '💻' },
+        { id: 'Design', name: 'Design', icon: '🎨' },
+        { id: '読み物', name: '読み物', icon: '📰' },
+      ];
+    }
+  } catch(e) { console.error(e); }
+}
+
+function saveLocal() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      bookmarks: state.bookmarks,
+      collections: state.collections,
+    }));
+    document.getElementById('last-saved').textContent = new Date().toLocaleTimeString('ja-JP');
+  } catch(e) { console.error(e); }
+}
+
+// ========== JSON エクスポート・インポート ==========
+function exportJSON() {
+  const data = JSON.stringify({ bookmarks: state.bookmarks, collections: state.collections }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'my-raindrop-bookmarks.json';
+  a.click();
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.bookmarks) state.bookmarks = data.bookmarks;
+      if (data.collections) state.collections = data.collections;
+      saveLocal();
+      renderSidebar();
+      renderCards();
+      alert(`${state.bookmarks.length}件のブックマークをインポートしました。`);
+    } catch(err) {
+      alert('JSONファイルの読み込みに失敗しました。');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ========== Google Drive 連携 ==========
+function saveToGDrive() {
+  document.getElementById('gdrive-modal-title').textContent = 'Googleドライブへ保存';
+  if (!IS_HOSTED) {
+    document.getElementById('gdrive-note').innerHTML =
+      '⚠️ Google Drive連携はホスティング後（GitHub Pages / Netlify等）に使用できます。<br>現在はローカルファイルとして開いているため、Drive連携は無効です。<br>代わりに「JSONエクスポート」をご利用ください。';
+    document.getElementById('gdrive-confirm-btn').style.display = 'none';
+  } else {
+    document.getElementById('gdrive-note').innerHTML = 'ブックマークデータをGoogleドライブに保存します。';
+    document.getElementById('gdrive-confirm-btn').style.display = 'inline-block';
+    document.getElementById('gdrive-confirm-btn').onclick = execSaveToGDrive;
+  }
+  document.getElementById('gdrive-loading').style.display = 'none';
+  document.getElementById('gdrive-result').style.display = 'none';
+  document.getElementById('gdrive-actions').style.display = 'flex';
+  document.getElementById('modal-gdrive').style.display = 'flex';
+}
+
+function loadFromGDrive() {
+  document.getElementById('gdrive-modal-title').textContent = 'ドライブから読み込む';
+  if (!IS_HOSTED) {
+    document.getElementById('gdrive-note').innerHTML =
+      '⚠️ Google Drive連携はホスティング後に使用できます。<br>現在は「JSONインポート」をご利用ください。';
+    document.getElementById('gdrive-confirm-btn').style.display = 'none';
+  } else {
+    document.getElementById('gdrive-note').innerHTML = 'Googleドライブからデータを読み込みます。';
+    document.getElementById('gdrive-confirm-btn').style.display = 'inline-block';
+    document.getElementById('gdrive-confirm-btn').onclick = execLoadFromGDrive;
+  }
+  document.getElementById('gdrive-loading').style.display = 'none';
+  document.getElementById('gdrive-result').style.display = 'none';
+  document.getElementById('gdrive-actions').style.display = 'flex';
+  document.getElementById('modal-gdrive').style.display = 'flex';
+}
+
+async function execSaveToGDrive() {
+  document.getElementById('gdrive-actions').style.display = 'none';
+  document.getElementById('gdrive-loading').style.display = 'block';
+  try {
+    const data = JSON.stringify({ bookmarks: state.bookmarks, collections: state.collections }, null, 2);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        mcp_servers: [{ type: 'url', url: 'https://gdrive.mcp.claude.com/mcp', name: 'gdrive' }],
+        messages: [{ role: 'user', content: `以下のJSONを"my-raindrop-bookmarks.json"としてGoogleドライブのルートに保存してください。既存ファイルがあれば上書き。データ: ${data}` }]
+      })
+    });
+    const j = await res.json();
+    document.getElementById('gdrive-loading').style.display = 'none';
+    const r = document.getElementById('gdrive-result');
+    r.style.display = 'block';
+    r.innerHTML = '✅ Googleドライブに保存しました。';
+    document.getElementById('status-text').textContent = 'Googleドライブに保存済み';
+    document.getElementById('last-saved').textContent = new Date().toLocaleTimeString('ja-JP');
+    document.getElementById('gdrive-actions').style.display = 'flex';
+    document.getElementById('gdrive-confirm-btn').style.display = 'none';
+  } catch(e) {
+    document.getElementById('gdrive-loading').style.display = 'none';
+    const r = document.getElementById('gdrive-result');
+    r.style.display = 'block';
+    r.innerHTML = `❌ エラー: ${e.message}`;
+    document.getElementById('gdrive-actions').style.display = 'flex';
+  }
+}
+
+async function execLoadFromGDrive() {
+  document.getElementById('gdrive-actions').style.display = 'none';
+  document.getElementById('gdrive-loading').style.display = 'block';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        mcp_servers: [{ type: 'url', url: 'https://gdrive.mcp.claude.com/mcp', name: 'gdrive' }],
+        messages: [{ role: 'user', content: 'GoogleドライブにあるJSONファイル"my-raindrop-bookmarks.json"の内容をそのまま返してください。他のテキストは不要です。' }]
+      })
+    });
+    const j = await res.json();
+    const text = (j.content || []).filter(x => x.type === 'text').map(x => x.text).join('');
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    if (parsed.bookmarks) state.bookmarks = parsed.bookmarks;
+    if (parsed.collections) state.collections = parsed.collections;
+    saveLocal();
+    document.getElementById('gdrive-loading').style.display = 'none';
+    const r = document.getElementById('gdrive-result');
+    r.style.display = 'block';
+    r.innerHTML = `✅ ${state.bookmarks.length}件読み込みました。`;
+    document.getElementById('status-text').textContent = 'Googleドライブから読み込み済み';
+    renderSidebar();
+    renderCards();
+    document.getElementById('gdrive-actions').style.display = 'flex';
+    document.getElementById('gdrive-confirm-btn').style.display = 'none';
+  } catch(e) {
+    document.getElementById('gdrive-loading').style.display = 'none';
+    const r = document.getElementById('gdrive-result');
+    r.style.display = 'block';
+    r.innerHTML = `❌ エラー: ${e.message}`;
+    document.getElementById('gdrive-actions').style.display = 'flex';
+  }
+}
+
+// ========== 描画 ==========
+function renderSidebar() {
+  const list = document.getElementById('collection-list');
+  list.innerHTML = state.collections.map(c => {
+    const cnt = c.id === 'all' ? state.bookmarks.length : state.bookmarks.filter(b => b.collection === c.id).length;
+    return `<div class="sidebar-item${state.activeCollection === c.id && !state.activeTag ? ' active' : ''}" onclick="setCollection('${c.id}')">
+      <span style="font-size:14px">${c.icon}</span>
+      <span>${c.name}</span>
+      <span class="count">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  const tagMap = {};
+  state.bookmarks.forEach(b => (b.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; }));
+  document.getElementById('tag-list').innerHTML = Object.keys(tagMap).map(t =>
+    `<span class="tag" style="${state.activeTag === t ? 'outline:1.5px solid #1a56db' : ''}" onclick="setTag('${t}')">${t}</span>`
+  ).join('');
+}
+
+function setCollection(id) { state.activeCollection = id; state.activeTag = null; renderSidebar(); renderCards(); }
+function setTag(t) { state.activeTag = state.activeTag === t ? null : t; renderSidebar(); renderCards(); }
+
+function renderCards() {
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  let items = state.bookmarks;
+  if (state.activeCollection !== 'all') items = items.filter(b => b.collection === state.activeCollection);
+  if (state.activeTag) items = items.filter(b => (b.tags || []).includes(state.activeTag));
+  if (q) items = items.filter(b => (b.title + b.url + (b.tags || []).join(' ')).toLowerCase().includes(q));
+
+  const grid = document.getElementById('card-grid');
+  if (!items.length) {
+    grid.innerHTML = `<div class="empty"><div class="emoji">🔖</div><p>ブックマークがありません</p><p style="margin-top:6px;font-size:12px">「+ 追加」からURLを保存しましょう</p></div>`;
+    return;
+  }
+  grid.innerHTML = items.map(b => `
+    <div class="card">
+      <div class="card-actions">
+        <button class="card-action-btn" onclick="openEdit(${b.id})" title="編集">✏️</button>
+        <button class="card-action-btn danger" onclick="deleteBookmark(${b.id})" title="削除">🗑</button>
+      </div>
+      <div class="card-thumb">${b.thumb || '🌐'}</div>
+      <div class="card-body">
+        <div class="card-title" title="${b.title}">${b.title}</div>
+        <div class="card-url">${b.url.replace(/^https?:\/\//, '').split('/')[0]}</div>
+        <div class="tags">${(b.tags || []).map(t => `<span class="tag" onclick="setTag('${t}')">${t}</span>`).join('')}</div>
+        <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener">開く →</a>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ========== モーダル操作 ==========
+function openAddModal() {
+  state.editingId = null;
+  document.getElementById('modal-title').textContent = 'ブックマークを追加';
+  document.getElementById('f-url').value = '';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-tags').value = '';
+  const sel = document.getElementById('f-col');
+  sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
+    `<option value="${c.id}">${c.name}</option>`
+  ).join('');
+  document.getElementById('modal-add').style.display = 'flex';
+}
+
+function openEdit(id) {
+  const b = state.bookmarks.find(x => x.id === id);
+  if (!b) return;
+  state.editingId = id;
+  document.getElementById('modal-title').textContent = 'ブックマークを編集';
+  document.getElementById('f-url').value = b.url;
+  document.getElementById('f-title').value = b.title;
+  document.getElementById('f-tags').value = (b.tags || []).join(', ');
+  const sel = document.getElementById('f-col');
+  sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
+    `<option value="${c.id}"${c.id === b.collection ? ' selected' : ''}>${c.name}</option>`
+  ).join('');
+  document.getElementById('modal-add').style.display = 'flex';
+}
+
+function saveBookmark() {
+  const url = document.getElementById('f-url').value.trim();
+  const title = document.getElementById('f-title').value.trim() || url;
+  const col = document.getElementById('f-col').value;
+  const tags = document.getElementById('f-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  if (!url) return;
+  if (state.editingId) {
+    const b = state.bookmarks.find(x => x.id === state.editingId);
+    if (b) Object.assign(b, { url, title, collection: col, tags });
+  } else {
+    state.bookmarks.push({ id: Date.now(), url, title, collection: col, tags, thumb: randEmoji() });
+  }
+  saveLocal();
+  closeModal('modal-add');
+  renderSidebar();
+  renderCards();
+}
+
+function deleteBookmark(id) {
+  if (!confirm('このブックマークを削除しますか？')) return;
+  state.bookmarks = state.bookmarks.filter(b => b.id !== id);
+  saveLocal();
+  renderSidebar();
+  renderCards();
+}
+
+function openAddCollection() {
+  document.getElementById('f-col-name').value = '';
+  document.getElementById('f-col-icon').value = '';
+  document.getElementById('modal-col').style.display = 'flex';
+}
+
+function saveCollection() {
+  const name = document.getElementById('f-col-name').value.trim();
+  const icon = document.getElementById('f-col-icon').value.trim() || '📁';
+  if (!name) return;
+  state.collections.push({ id: name, name, icon });
+  saveLocal();
+  closeModal('modal-col');
+  renderSidebar();
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['modal-add', 'modal-col', 'modal-gdrive'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+  }
+});
+
+// ========== PWA インストール ==========
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!localStorage.getItem('pwa_dismissed')) {
+    document.getElementById('install-banner').style.display = 'flex';
+  }
+});
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => {
+    deferredPrompt = null;
+    document.getElementById('install-banner').style.display = 'none';
+  });
+}
+
+function dismissInstall() {
+  localStorage.setItem('pwa_dismissed', '1');
+  document.getElementById('install-banner').style.display = 'none';
+}
+
+// ========== Service Worker 登録 ==========
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW:', err));
+}
+
+// ========== 初期化 ==========
+loadLocal();
+renderSidebar();
+renderCards();
+</script>
+</body>
+</html>
