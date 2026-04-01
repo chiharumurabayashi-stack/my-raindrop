@@ -85,11 +85,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 
 /* Tags sidebar */
 .tag-list{padding:0 8px 0 12px;display:flex;flex-wrap:wrap;gap:4px;flex:1;overflow-y:auto;align-content:flex-start}
-.tag-item{position:relative;display:inline-flex;align-items:center}
+.tag-item{display:inline-flex;align-items:center;gap:1px}
 .tag-item:hover .tag-item-actions{display:flex}
-.tag-item-actions{display:none;position:absolute;top:-6px;right:-6px;gap:2px;background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:6px;padding:1px;box-shadow:0 2px 6px rgba(0,0,0,0.1);z-index:10}
-.tag-item-btn{width:16px;height:16px;border:none;background:transparent;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:3px;padding:0}
-.tag-item-btn:hover{background:#f0f0ee}
+.tag-item-actions{display:none;gap:1px}
+.tag-item-btn{width:15px;height:15px;border:none;background:transparent;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;border-radius:3px;padding:0;opacity:0.6}
+.tag-item-btn:hover{background:rgba(0,0,0,0.08);opacity:1}
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100}
