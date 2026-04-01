@@ -749,39 +749,49 @@ async function deleteCollection(id) {
 // ========== コンテキストメニュー ==========
 let ctxTargetTag = null;
 
+let _ctxJustOpened = false;
+
 function openCtxMenu(event, tag) {
   event.preventDefault();
   event.stopPropagation();
   ctxTargetTag = tag;
+  _ctxJustOpened = true;
   const menu = document.getElementById('ctx-menu');
+  // まず左上に表示してサイズを確定させる
+  menu.style.left = '0px';
+  menu.style.top = '0px';
   menu.style.display = 'block';
-  const x = Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 8);
-  const y = Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 8);
-  menu.style.left = x + 'px';
-  menu.style.top = y + 'px';
+  requestAnimationFrame(() => {
+    const x = Math.min(event.clientX, window.innerWidth - menu.offsetWidth - 8);
+    const y = Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 8);
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    _ctxJustOpened = false;
+  });
 }
 
 function closeCtxMenu() {
+  if (_ctxJustOpened) return;
   document.getElementById('ctx-menu').style.display = 'none';
   ctxTargetTag = null;
 }
 
 function ctxRename() {
   const tag = ctxTargetTag;
-  closeCtxMenu();
+  ctxTargetTag = null;
+  document.getElementById('ctx-menu').style.display = 'none';
   if (tag) openTagRename(tag);
 }
 
 function ctxDelete() {
   const tag = ctxTargetTag;
-  closeCtxMenu();
+  ctxTargetTag = null;
+  document.getElementById('ctx-menu').style.display = 'none';
   if (tag) deleteTag(tag);
 }
 
 document.addEventListener('click', () => closeCtxMenu());
-document.addEventListener('contextmenu', e => {
-  if (!e.target.closest('#ctx-menu')) closeCtxMenu();
-});
+document.addEventListener('contextmenu', () => closeCtxMenu());
 
 // ========== タグ管理 ==========
 let editingTagName = null;
