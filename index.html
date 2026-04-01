@@ -161,8 +161,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 <div id="modal-add" class="modal-bg" style="display:none">
   <div class="modal">
     <h3 id="modal-title">ブックマークを追加</h3>
-    <div class="field"><label>URL</label><input id="f-url" type="url" placeholder="https://example.com"></div>
-    <div class="field"><label>タイトル</label><input id="f-title" type="text" placeholder="サイト名"></div>
+    <div class="field"><label>URL</label><input id="f-url" type="url" placeholder="https://example.com" oninput="onUrlInput()"></div>
+    <div class="field">
+      <label>タイトル <span id="title-fetching" style="color:#aaa;font-weight:normal;display:none">取得中...</span></label>
+      <input id="f-title" type="text" placeholder="サイト名">
+    </div>
     <div class="field"><label>コレクション</label><select id="f-col"></select></div>
     <div class="field"><label>タグ（カンマ区切り）</label><input id="f-tags" type="text" placeholder="design, tool, news"></div>
     <div class="modal-actions">
@@ -384,12 +387,40 @@ function renderCards() {
 }
 
 // ========== モーダル操作 ==========
+// ========== URL からタイトル自動取得 ==========
+let fetchTimer = null;
+function onUrlInput() {
+  clearTimeout(fetchTimer);
+  const url = document.getElementById('f-url').value.trim();
+  if (!url || !url.startsWith('http')) return;
+  // 編集中はスキップ（タイトルが既に入っている場合）
+  if (state.editingId) return;
+  fetchTimer = setTimeout(() => fetchTitle(url), 600);
+}
+
+async function fetchTitle(url) {
+  document.getElementById('title-fetching').style.display = 'inline';
+  try {
+    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    const json = await res.json();
+    const title = json?.data?.title;
+    if (title && !document.getElementById('f-title').value) {
+      document.getElementById('f-title').value = title;
+    }
+  } catch(e) {
+    // 取得失敗は無視（手動入力で対応）
+  } finally {
+    document.getElementById('title-fetching').style.display = 'none';
+  }
+}
+
 function openAddModal() {
   state.editingId = null;
   document.getElementById('modal-title').textContent = 'ブックマークを追加';
   document.getElementById('f-url').value = '';
   document.getElementById('f-title').value = '';
   document.getElementById('f-tags').value = '';
+  document.getElementById('title-fetching').style.display = 'none';
   const sel = document.getElementById('f-col');
   sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
     `<option value="${c.id}">${c.name}</option>`
