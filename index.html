@@ -90,10 +90,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100}
 .modal{background:#fff;border-radius:12px;padding:24px;width:420px;max-width:90vw;border:0.5px solid rgba(0,0,0,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.12)}
 .modal h3{font-size:16px;font-weight:500;margin-bottom:16px}
-.field{margin-bottom:14px}
+.field{margin-bottom:14px;position:relative}
 .field label{display:block;font-size:12px;color:#666;margin-bottom:5px}
 .field input,.field select{width:100%;padding:8px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f5f5f3;font-size:13px;color:#1a1a1a;outline:none;font-family:inherit}
 .field input:focus,.field select:focus{border-color:rgba(0,0,0,0.35);background:#fff}
+/* Tag chip input */
+.tag-input-wrap{width:100%;min-height:36px;padding:4px 8px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f5f5f3;display:flex;flex-wrap:wrap;gap:4px;align-items:center;cursor:text}
+.tag-input-wrap:focus-within{border-color:rgba(0,0,0,0.35);background:#fff}
+.tag-chip{display:inline-flex;align-items:center;gap:2px;font-size:12px;padding:2px 6px 2px 8px;border-radius:99px;background:#e8f0fe;color:#1a56db}
+.tag-chip-remove{background:none;border:none;color:#1a56db;cursor:pointer;font-size:14px;padding:0 1px;line-height:1}
+.tag-chip-remove:hover{color:#0d47a1}
+.tag-input-text{border:none;background:transparent;outline:none;font-size:13px;color:#1a1a1a;min-width:80px;flex:1;padding:2px 0;font-family:inherit}
+.tag-dropdown{position:absolute;left:0;right:0;background:#fff;border:0.5px solid rgba(0,0,0,0.15);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-height:220px;overflow-y:auto;z-index:200;top:100%;margin-top:2px}
+.tag-dropdown-section{font-size:11px;color:#999;padding:8px 12px 3px;text-transform:uppercase;letter-spacing:0.05em}
+.tag-dropdown-item{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;cursor:pointer;font-size:13px;color:#1a1a1a}
+.tag-dropdown-item:hover{background:#f5f5f3}
+.tag-dropdown-count{font-size:11px;color:#bbb}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 
 .empty{text-align:center;padding:48px 16px;color:#bbb;grid-column:1/-1}
@@ -174,7 +186,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <input id="f-title" type="text" placeholder="サイト名">
     </div>
     <div class="field"><label>コレクション</label><select id="f-col"></select></div>
-    <div class="field"><label>タグ（カンマ区切り）</label><input id="f-tags" type="text" placeholder="design, tool, news"></div>
+    <div class="field" id="field-tags">
+      <label>タグ</label>
+      <div class="tag-input-wrap" onclick="document.getElementById('f-tags-input').focus()">
+        <span id="tag-chips"></span>
+        <input id="f-tags-input" class="tag-input-text" type="text" placeholder="タグを追加..." autocomplete="off"
+          oninput="onTagInput()" onfocus="showTagDropdown()" onblur="setTimeout(hideTagDropdown,150)" onkeydown="onTagKeydown(event)">
+      </div>
+      <div class="tag-dropdown" id="tag-dropdown" style="display:none"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-add')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveBookmark()">保存</button>
@@ -492,13 +512,106 @@ async function fetchTitle(url) {
   }
 }
 
+// ========== タグ入力 ==========
+let selectedTags = [];
+
+function tagEsc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function initTagInput(tags) {
+  selectedTags = tags ? [...tags] : [];
+  renderTagChips();
+  const inp = document.getElementById('f-tags-input');
+  if (inp) inp.value = '';
+  hideTagDropdown();
+}
+
+function renderTagChips() {
+  const container = document.getElementById('tag-chips');
+  if (!container) return;
+  container.innerHTML = selectedTags.map((t, i) =>
+    `<span class="tag-chip">${tagEsc(t)}<button class="tag-chip-remove" onmousedown="event.preventDefault();removeTag(${i})">×</button></span>`
+  ).join('');
+}
+
+function removeTag(index) {
+  selectedTags.splice(index, 1);
+  renderTagChips();
+}
+
+function onTagInput() { showTagDropdown(); }
+
+function onTagKeydown(e) {
+  const inp = document.getElementById('f-tags-input');
+  const val = inp.value.trim();
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    if (val) addTagToSelected(val);
+  } else if (e.key === 'Backspace' && !val && selectedTags.length > 0) {
+    selectedTags.pop();
+    renderTagChips();
+  }
+}
+
+function addTagToSelected(tag) {
+  const t = tag.trim();
+  if (t && !selectedTags.includes(t)) { selectedTags.push(t); renderTagChips(); }
+  document.getElementById('f-tags-input').value = '';
+  showTagDropdown();
+}
+
+function showTagDropdown() {
+  const inp = document.getElementById('f-tags-input');
+  const query = (inp ? inp.value.trim() : '').toLowerCase();
+  const freq = {};
+  state.bookmarks.forEach(b => (b.tags || []).forEach(t => { freq[t] = (freq[t] || 0) + 1; }));
+  let allTags = Object.keys(freq).sort((a, b) => freq[b] - freq[a]);
+  let filtered = query ? allTags.filter(t => t.toLowerCase().includes(query)) : allTags;
+  filtered = filtered.filter(t => !selectedTags.includes(t));
+  const dropdown = document.getElementById('tag-dropdown');
+  if (!dropdown) return;
+  let html = '';
+  if (!query) {
+    const seen = new Set(); const recent = [];
+    for (const b of [...state.bookmarks].reverse()) {
+      for (const t of (b.tags || [])) {
+        if (!seen.has(t) && !selectedTags.includes(t)) { seen.add(t); recent.push(t); }
+        if (recent.length >= 6) break;
+      }
+      if (recent.length >= 6) break;
+    }
+    if (recent.length > 0) {
+      html += `<div class="tag-dropdown-section">最近の</div>`;
+      html += recent.map(t => `<div class="tag-dropdown-item" onmousedown="event.preventDefault();addTagToSelected('${tagEsc(t)}')">${tagEsc(t)}</div>`).join('');
+    }
+    if (filtered.length > 0) {
+      html += `<div class="tag-dropdown-section">すべて</div>`;
+      html += filtered.map(t => `<div class="tag-dropdown-item" onmousedown="event.preventDefault();addTagToSelected('${tagEsc(t)}')">${tagEsc(t)}<span class="tag-dropdown-count">${freq[t]}</span></div>`).join('');
+    }
+  } else {
+    html += filtered.map(t => `<div class="tag-dropdown-item" onmousedown="event.preventDefault();addTagToSelected('${tagEsc(t)}')">${tagEsc(t)}<span class="tag-dropdown-count">${freq[t]}</span></div>`).join('');
+    if (!freq[query] && query) {
+      html += `<div class="tag-dropdown-item" onmousedown="event.preventDefault();addTagToSelected('${tagEsc(query)}')" style="color:#888">「${tagEsc(query)}」を追加</div>`;
+    }
+  }
+  if (!html) { hideTagDropdown(); return; }
+  dropdown.innerHTML = html;
+  dropdown.style.display = 'block';
+}
+
+function hideTagDropdown() {
+  const d = document.getElementById('tag-dropdown');
+  if (d) d.style.display = 'none';
+}
+
 function openAddModal() {
   state.editingId = null;
   document.getElementById('modal-title').textContent = 'ブックマークを追加';
   document.getElementById('f-url').value = '';
   document.getElementById('f-title').value = '';
-  document.getElementById('f-tags').value = '';
   document.getElementById('title-fetching').style.display = 'none';
+  initTagInput([]);
   const sel = document.getElementById('f-col');
   sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
     `<option value="${c.id}"${c.id === state.activeCollection ? ' selected' : ''}>${c.name}</option>`
@@ -513,7 +626,7 @@ function openEdit(id) {
   document.getElementById('modal-title').textContent = 'ブックマークを編集';
   document.getElementById('f-url').value = b.url;
   document.getElementById('f-title').value = b.title;
-  document.getElementById('f-tags').value = (b.tags || []).join(', ');
+  initTagInput(b.tags || []);
   const sel = document.getElementById('f-col');
   sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
     `<option value="${c.id}"${c.id === b.collection ? ' selected' : ''}>${c.name}</option>`
@@ -525,7 +638,10 @@ async function saveBookmark() {
   const url = document.getElementById('f-url').value.trim();
   const title = document.getElementById('f-title').value.trim() || url;
   const col = document.getElementById('f-col').value;
-  const tags = document.getElementById('f-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  // 入力中のテキストも保存
+  const inputVal = document.getElementById('f-tags-input').value.trim();
+  if (inputVal && !selectedTags.includes(inputVal)) selectedTags.push(inputVal);
+  const tags = [...selectedTags];
   if (!url) return;
   if (state.editingId) {
     const b = state.bookmarks.find(x => x.id === state.editingId);
