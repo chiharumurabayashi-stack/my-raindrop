@@ -84,7 +84,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .status-dot.error{background:#ef4444}
 
 /* Tags sidebar */
-.tag-list{padding:0 12px;display:flex;flex-wrap:wrap;gap:4px;flex:1;overflow-y:auto;align-content:flex-start}
+.tag-list{padding:0 8px 0 12px;display:flex;flex-wrap:wrap;gap:4px;flex:1;overflow-y:auto;align-content:flex-start}
+.tag-item{position:relative;display:inline-flex;align-items:center}
+.tag-item:hover .tag-item-actions{display:flex}
+.tag-item-actions{display:none;position:absolute;top:-6px;right:-6px;gap:2px;background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:6px;padding:1px;box-shadow:0 2px 6px rgba(0,0,0,0.1);z-index:10}
+.tag-item-btn{width:16px;height:16px;border:none;background:transparent;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;border-radius:3px;padding:0}
+.tag-item-btn:hover{background:#f0f0ee}
 
 /* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -196,6 +201,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-add')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveBookmark()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- タグ編集モーダル -->
+<div id="modal-tag" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>タグを編集</h3>
+    <div class="field"><label>タグ名</label><input id="f-tag-name" type="text" onkeydown="if(event.key==='Enter')saveTagRename()"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-tag')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveTagRename()">変更する</button>
     </div>
   </div>
 </div>
@@ -385,8 +402,14 @@ function renderSidebar() {
 
   const tagMap = {};
   state.bookmarks.forEach(b => (b.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; }));
-  document.getElementById('tag-list').innerHTML = Object.keys(tagMap).map(t =>
-    `<span class="tag" style="${state.activeTag === t ? 'outline:1.5px solid #1a56db' : ''}" onclick="setTag('${t}')">${t}</span>`
+  document.getElementById('tag-list').innerHTML = Object.keys(tagMap).sort().map(t =>
+    `<span class="tag-item">
+      <span class="tag" style="${state.activeTag === t ? 'outline:1.5px solid #1a56db' : ''}" onclick="setTag('${tagEsc(t)}')">${tagEsc(t)}</span>
+      <span class="tag-item-actions">
+        <button class="tag-item-btn" onclick="openTagRename('${tagEsc(t)}')" title="名前変更">✏️</button>
+        <button class="tag-item-btn" onclick="deleteTag('${tagEsc(t)}')" title="削除">🗑</button>
+      </span>
+    </span>`
   ).join('');
 }
 
@@ -718,10 +741,45 @@ async function deleteCollection(id) {
   await saveToFirestore();
 }
 
+// ========== タグ管理 ==========
+let editingTagName = null;
+
+function openTagRename(tag) {
+  editingTagName = tag;
+  document.getElementById('f-tag-name').value = tag;
+  document.getElementById('modal-tag').style.display = 'flex';
+  setTimeout(() => document.getElementById('f-tag-name').select(), 50);
+}
+
+async function saveTagRename() {
+  const newName = document.getElementById('f-tag-name').value.trim();
+  if (!newName || newName === editingTagName) { closeModal('modal-tag'); return; }
+  state.bookmarks.forEach(b => {
+    if (!b.tags) return;
+    const idx = b.tags.indexOf(editingTagName);
+    if (idx !== -1) b.tags[idx] = newName;
+  });
+  if (state.activeTag === editingTagName) state.activeTag = newName;
+  closeModal('modal-tag');
+  renderSidebar();
+  renderCards();
+  await saveToFirestore();
+}
+
+async function deleteTag(tag) {
+  const cnt = state.bookmarks.filter(b => (b.tags || []).includes(tag)).length;
+  if (!confirm(`タグ「${tag}」を削除しますか？\n（${cnt}件のブックマークから除去されます）`)) return;
+  state.bookmarks.forEach(b => { if (b.tags) b.tags = b.tags.filter(t => t !== tag); });
+  if (state.activeTag === tag) state.activeTag = null;
+  renderSidebar();
+  renderCards();
+  await saveToFirestore();
+}
+
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') ['modal-add', 'modal-col'].forEach(id => closeModal(id));
+  if (e.key === 'Escape') ['modal-add', 'modal-col', 'modal-tag'].forEach(id => closeModal(id));
 });
 
 // ========== PWA インストール ==========
