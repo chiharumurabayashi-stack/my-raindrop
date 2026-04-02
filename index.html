@@ -734,7 +734,7 @@ function hideTagDropdown() {
   if (d) d.style.display = 'none';
 }
 
-function openAddModal() {
+async function openAddModal() {
   state.editingId = null;
   document.getElementById('modal-title').textContent = 'ブックマークを追加';
   document.getElementById('f-url').value = '';
@@ -746,6 +746,16 @@ function openAddModal() {
     `<option value="${c.id}"${c.id === state.activeCollection ? ' selected' : ''}>${c.name}</option>`
   ).join('');
   document.getElementById('modal-add').style.display = 'flex';
+
+  // クリップボードにURLがあれば自動入力
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && /^https?:\/\//i.test(text.trim())) {
+      const urlInput = document.getElementById('f-url');
+      urlInput.value = text.trim();
+      fetchTitle(text.trim());
+    }
+  } catch(e) {}
 }
 
 function openEdit(id) {
