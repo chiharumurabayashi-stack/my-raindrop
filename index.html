@@ -393,9 +393,13 @@ function importJSON(event) {
 // ========== 描画 ==========
 function renderSidebar() {
   const list = document.getElementById('collection-list');
-  list.innerHTML = state.collections.map(c => {
-    const cnt = c.id === 'all' ? state.bookmarks.length : state.bookmarks.filter(b => b.collection === c.id).length;
-    const isDraggable = c.id !== 'all';
+  const unclassifiedCnt = state.bookmarks.filter(b => !b.collection).length;
+  const unclassified = unclassifiedCnt > 0 ? [{id: '__unclassified__', name: '未分類', icon: '📂', _virtual: true}] : [];
+  list.innerHTML = [...state.collections, ...unclassified].map(c => {
+    const cnt = c.id === 'all' ? state.bookmarks.length
+      : c.id === '__unclassified__' ? unclassifiedCnt
+      : state.bookmarks.filter(b => b.collection === c.id).length;
+    const isDraggable = c.id !== 'all' && c.id !== '__unclassified__';
     const actions = isDraggable ? `
       <span class="col-actions">
         <button class="col-btn" onclick="event.stopPropagation();openEditCollection('${c.id}')" title="編集">✏️</button>
@@ -522,7 +526,8 @@ function setTag(t) { state.activeTag = state.activeTag === t ? null : t; renderS
 function renderCards() {
   const q = (document.getElementById('search-input').value || '').toLowerCase();
   let items = state.bookmarks;
-  if (state.activeCollection !== 'all') items = items.filter(b => b.collection === state.activeCollection);
+  if (state.activeCollection === '__unclassified__') items = items.filter(b => !b.collection);
+  else if (state.activeCollection !== 'all') items = items.filter(b => b.collection === state.activeCollection);
   if (state.activeTag) items = items.filter(b => (b.tags || []).includes(state.activeTag));
   if (q) items = items.filter(b => (b.title + b.url + (b.tags || []).join(' ')).toLowerCase().includes(q));
 
