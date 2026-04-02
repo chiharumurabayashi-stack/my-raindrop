@@ -37,7 +37,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .col-btn{width:20px;height:20px;border:none;background:transparent;cursor:pointer;font-size:11px;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0}
 .col-btn:hover{background:rgba(0,0,0,0.08)}
 .sidebar-item.drag-over{background:#e8f0fe;border:1.5px dashed #1a56db}
+.sidebar-item.col-drag-above{border-top:2px solid #1a56db}
+.sidebar-item.col-drag-below{border-bottom:2px solid #1a56db}
 .card{cursor:grab}.card:active{cursor:grabbing;opacity:0.7}
+.card.card-drag-over{outline:2px solid #1a56db;outline-offset:2px}
 .sidebar-spacer{flex:1}
 .sidebar-bottom{padding:8px 12px;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:8px}
 
@@ -392,16 +395,21 @@ function renderSidebar() {
   const list = document.getElementById('collection-list');
   list.innerHTML = state.collections.map(c => {
     const cnt = c.id === 'all' ? state.bookmarks.length : state.bookmarks.filter(b => b.collection === c.id).length;
-    const actions = c.id !== 'all' ? `
+    const isDraggable = c.id !== 'all';
+    const actions = isDraggable ? `
       <span class="col-actions">
         <button class="col-btn" onclick="event.stopPropagation();openEditCollection('${c.id}')" title="編集">✏️</button>
         <button class="col-btn" onclick="event.stopPropagation();deleteCollection('${c.id}')" title="削除">🗑</button>
       </span>` : '';
+    const dragHandle = isDraggable ? `<span style="color:#ccc;cursor:grab;font-size:12px;margin-right:-4px" ondragstart="colDragStart(event,'${c.id}')" draggable="true" onclick="event.stopPropagation()">⠿</span>` : '';
     return `<div class="sidebar-item${state.activeCollection === c.id && !state.activeTag ? ' active' : ''}"
       onclick="setCollection('${c.id}')"
-      ondragover="event.preventDefault();this.classList.add('drag-over')"
-      ondragleave="this.classList.remove('drag-over')"
-      ondrop="dropToCollection(event, '${c.id}');this.classList.remove('drag-over')">
+      ondragover="colDragOver(event,'${c.id}')"
+      ondragleave="colDragLeave(this)"
+      ondrop="event.dataTransfer.getData('type')==='bookmark'?dropToCollection(event,'${c.id}'):colDrop(event,'${c.id}')"
+      ondragend="document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.remove('col-drag-above','col-drag-below','drag-over'))"
+      >
+      ${dragHandle}
       <span style="font-size:14px">${c.icon}</span>
       <span>${c.name}</span>
       <span class="count">${cnt}</span>
@@ -422,16 +430,89 @@ function setCollection(id) { state.activeCollection = id; state.activeTag = null
 
 // ========== ドラッグ＆ドロップ ==========
 function dragStart(event, bookmarkId) {
-  event.dataTransfer.setData('bookmarkId', bookmarkId);
+  event.dataTransfer.setData('bookmarkId', String(bookmarkId));
+  event.dataTransfer.setData('type', 'bookmark');
   event.dataTransfer.effectAllowed = 'move';
 }
 
 async function dropToCollection(event, collectionId) {
   event.preventDefault();
+  if (event.dataTransfer.getData('type') !== 'bookmark') return;
   const id = Number(event.dataTransfer.getData('bookmarkId'));
   const b = state.bookmarks.find(x => x.id === id);
   if (!b || b.collection === collectionId) return;
   b.collection = collectionId === 'all' ? '' : collectionId;
+  renderSidebar();
+  renderCards();
+  await saveToFirestore();
+}
+
+// カード並び替え
+function cardDragOver(event, targetId) {
+  if (event.dataTransfer.getData('type') === 'col') return;
+  event.preventDefault();
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('card-drag-over'));
+  event.currentTarget.classList.add('card-drag-over');
+}
+
+async function cardDrop(event, targetId) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.dataTransfer.getData('type') === 'col') return;
+  const fromId = Number(event.dataTransfer.getData('bookmarkId'));
+  if (!fromId || fromId === targetId) { document.querySelectorAll('.card').forEach(c => c.classList.remove('card-drag-over')); return; }
+  const fromIdx = state.bookmarks.findIndex(b => b.id === fromId);
+  const toIdx   = state.bookmarks.findIndex(b => b.id === targetId);
+  if (fromIdx === -1 || toIdx === -1) return;
+  const [moved] = state.bookmarks.splice(fromIdx, 1);
+  state.bookmarks.splice(toIdx, 0, moved);
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('card-drag-over'));
+  renderSidebar();
+  renderCards();
+  await saveToFirestore();
+}
+
+// コレクション並び替え
+let colDraggingId = null;
+
+function colDragStart(event, colId) {
+  colDraggingId = colId;
+  event.dataTransfer.setData('type', 'col');
+  event.dataTransfer.setData('colId', colId);
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+function colDragOver(event, targetId) {
+  if (!event.dataTransfer.types.includes('type')) return;
+  event.preventDefault();
+  const el = event.currentTarget;
+  el.classList.remove('col-drag-above', 'col-drag-below', 'drag-over');
+  const mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+  el.classList.add(event.clientY < mid ? 'col-drag-above' : 'col-drag-below');
+}
+
+function colDragLeave(el) {
+  el.classList.remove('col-drag-above', 'col-drag-below', 'drag-over');
+}
+
+async function colDrop(event, targetId) {
+  event.preventDefault();
+  event.stopPropagation();
+  const fromId = event.dataTransfer.getData('colId');
+  if (!fromId || fromId === targetId || targetId === 'all') {
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('col-drag-above','col-drag-below','drag-over'));
+    return;
+  }
+  const el = event.currentTarget;
+  const mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+  const insertBefore = event.clientY < mid;
+  const fromIdx = state.collections.findIndex(c => c.id === fromId);
+  let toIdx = state.collections.findIndex(c => c.id === targetId);
+  if (fromIdx === -1 || toIdx === -1) return;
+  const [moved] = state.collections.splice(fromIdx, 1);
+  toIdx = state.collections.findIndex(c => c.id === targetId);
+  state.collections.splice(insertBefore ? toIdx : toIdx + 1, 0, moved);
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('col-drag-above','col-drag-below','drag-over'));
   renderSidebar();
   renderCards();
   await saveToFirestore();
@@ -451,7 +532,11 @@ function renderCards() {
     return;
   }
   grid.innerHTML = items.map(b => `
-    <div class="card" draggable="true" ondragstart="dragStart(event, ${b.id})">
+    <div class="card" draggable="true"
+      ondragstart="dragStart(event, ${b.id})"
+      ondragover="cardDragOver(event, ${b.id})"
+      ondragleave="this.classList.remove('card-drag-over')"
+      ondrop="cardDrop(event, ${b.id})">
       <div class="card-actions">
         <button class="card-action-btn" onclick="openEdit(${b.id})" title="編集">✏️</button>
         <button class="card-action-btn danger" onclick="deleteBookmark(${b.id})" title="削除">🗑</button>
