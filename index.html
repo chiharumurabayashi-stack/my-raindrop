@@ -495,11 +495,29 @@ function faviconUrl(url) {
 }
 
 async function fetchPageMeta(url) {
-  const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-  const html = await res.text();
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const title = doc.querySelector('title')?.textContent?.trim() || null;
-  const ogImg = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+  let title = null, ogImg = null;
+
+  // Step1: corsproxy.io で直接HTML取得
+  try {
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(6000) });
+    if (res.ok) {
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      title = doc.querySelector('title')?.textContent?.trim() || null;
+      ogImg = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+    }
+  } catch(e) {}
+
+  // Step2: タイトルまたは画像が取れなければ microlink.io で補完
+  if (!title || !ogImg) {
+    try {
+      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
+      const json = await res.json();
+      if (!title) title = json?.data?.title || null;
+      if (!ogImg) ogImg = json?.data?.image?.url || json?.data?.screenshot?.url || null;
+    } catch(e) {}
+  }
+
   return { title, ogImg };
 }
 
