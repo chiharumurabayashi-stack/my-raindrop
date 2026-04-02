@@ -742,9 +742,11 @@ async function openAddModal() {
   document.getElementById('title-fetching').style.display = 'none';
   initTagInput([]);
   const sel = document.getElementById('f-col');
-  sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
-    `<option value="${c.id}"${c.id === state.activeCollection ? ' selected' : ''}>${c.name}</option>`
-  ).join('');
+  const activeCol = state.activeCollection === 'all' ? '' : state.activeCollection;
+  sel.innerHTML = `<option value=""${activeCol === '' ? ' selected' : ''}>未分類</option>` +
+    state.collections.filter(c => c.id !== 'all').map(c =>
+      `<option value="${c.id}"${c.id === activeCol ? ' selected' : ''}>${c.name}</option>`
+    ).join('');
   document.getElementById('modal-add').style.display = 'flex';
 
   // クリップボードにURLがあれば自動入力
@@ -767,9 +769,10 @@ function openEdit(id) {
   document.getElementById('f-title').value = b.title;
   initTagInput(b.tags || []);
   const sel = document.getElementById('f-col');
-  sel.innerHTML = state.collections.filter(c => c.id !== 'all').map(c =>
-    `<option value="${c.id}"${c.id === b.collection ? ' selected' : ''}>${c.name}</option>`
-  ).join('');
+  sel.innerHTML = `<option value=""${!b.collection ? ' selected' : ''}>未分類</option>` +
+    state.collections.filter(c => c.id !== 'all').map(c =>
+      `<option value="${c.id}"${c.id === b.collection ? ' selected' : ''}>${c.name}</option>`
+    ).join('');
   document.getElementById('modal-add').style.display = 'flex';
 }
 
