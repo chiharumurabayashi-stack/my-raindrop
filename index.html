@@ -494,6 +494,15 @@ function faviconUrl(url) {
   } catch(e) { return null; }
 }
 
+async function fetchPageMeta(url) {
+  const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+  const html = await res.text();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const title = doc.querySelector('title')?.textContent?.trim() || null;
+  const ogImg = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
+  return { title, ogImg };
+}
+
 async function fetchMissingThumbs() {
   const targets = state.bookmarks.filter(b => !b.thumb || !b.thumb.startsWith('http'));
   if (!targets.length) return;
@@ -501,19 +510,13 @@ async function fetchMissingThumbs() {
   let updated = false;
   for (const b of targets) {
     try {
-      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(b.url)}`);
-      const data = await res.json();
-      const html = data.contents || '';
-      const ogImg = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-                 || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-      b.thumb = ogImg?.[1] || faviconUrl(b.url) || '🌐';
-      updated = true;
-      renderCards();
+      const { ogImg } = await fetchPageMeta(b.url);
+      b.thumb = ogImg || faviconUrl(b.url) || '🌐';
     } catch(e) {
       b.thumb = faviconUrl(b.url) || '🌐';
-      updated = true;
-      renderCards();
     }
+    updated = true;
+    renderCards();
     await new Promise(r => setTimeout(r, 200));
   }
   if (updated) await saveToFirestore();
@@ -523,22 +526,11 @@ async function fetchTitle(url) {
   document.getElementById('title-fetching').style.display = 'inline';
   pendingThumb = faviconUrl(url);
   try {
-    // HTMLを直接取得してtitleとOGP画像をパース（rate limit なし）
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-    const data = await res.json();
-    const html = data.contents || '';
-
-    // <title> タグ
-    const titleMatch = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
-    if (titleMatch && !document.getElementById('f-title').value) {
-      document.getElementById('f-title').value = titleMatch[1].trim();
+    const { title, ogImg } = await fetchPageMeta(url);
+    if (title && !document.getElementById('f-title').value) {
+      document.getElementById('f-title').value = title;
     }
-
-    // OGP画像 (og:image)
-    const ogImg = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-               || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    if (ogImg?.[1]) pendingThumb = ogImg[1];
-
+    if (ogImg) pendingThumb = ogImg;
   } catch(e) {
     pendingThumb = faviconUrl(url);
   } finally {
