@@ -16,7 +16,6 @@ h3 { font-size: 14px; font-weight: 500; margin-bottom: 14px; display: flex; alig
 }
 .field input:focus, .field select:focus { border-color: rgba(0,0,0,0.35); background: #fff; }
 .already { font-size: 11px; color: #f59e0b; margin-top: 4px; display: none; }
-
 /* タグ chip 入力 */
 .tag-input-wrap {
   width: 100%; min-height: 36px; padding: 4px 8px;
@@ -27,7 +26,6 @@ h3 { font-size: 14px; font-weight: 500; margin-bottom: 14px; display: flex; alig
 .tag-input-wrap:focus-within { border-color: rgba(0,0,0,0.35); background: #fff; }
 .tag-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; padding: 2px 6px 2px 8px; border-radius: 99px; background: #e8f0fe; color: #1a56db; }
 .tag-chip-remove { background: none; border: none; color: #1a56db; cursor: pointer; font-size: 14px; padding: 0 1px; line-height: 1; }
-.tag-chip-remove:hover { color: #0d47a1; }
 .tag-text-input { border: none; background: transparent; outline: none; font-size: 13px; color: #1a1a1a; min-width: 80px; flex: 1; padding: 2px 0; font-family: inherit; }
 .tag-dropdown {
   background: #fff; border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px;
@@ -35,10 +33,9 @@ h3 { font-size: 14px; font-weight: 500; margin-bottom: 14px; display: flex; alig
   margin-top: 4px; display: none;
 }
 .tag-dropdown-section { font-size: 10px; color: #bbb; padding: 6px 10px 2px; text-transform: uppercase; letter-spacing: 0.05em; }
-.tag-dropdown-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+.tag-dropdown-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; cursor: pointer; font-size: 13px; }
 .tag-dropdown-item:hover { background: #f5f5f3; }
 .tag-dropdown-count { font-size: 11px; color: #bbb; }
-
 .actions { display: flex; gap: 8px; margin-top: 14px; }
 .btn { flex: 1; padding: 8px; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 7px; background: transparent; font-size: 13px; color: #1a1a1a; cursor: pointer; font-family: inherit; }
 .btn:hover { background: #f0f0ee; }
@@ -66,16 +63,11 @@ h3 { font-size: 14px; font-weight: 500; margin-bottom: 14px; display: flex; alig
   <label>コレクション</label>
   <select id="f-col"><option value="">読み込み中...</option></select>
 </div>
-<div class="field" id="field-tags">
+<div class="field">
   <label>タグ</label>
-  <div class="tag-input-wrap" onclick="document.getElementById('tag-text-input').focus()">
+  <div class="tag-input-wrap" id="tag-input-wrap">
     <span id="tag-chips"></span>
-    <input id="tag-text-input" class="tag-text-input" type="text" placeholder="タグを追加..."
-      autocomplete="off"
-      oninput="onTagInput()"
-      onfocus="showTagDropdown()"
-      onblur="setTimeout(hideTagDropdown, 150)"
-      onkeydown="onTagKeydown(event)">
+    <input id="tag-text-input" class="tag-text-input" type="text" placeholder="タグを追加..." autocomplete="off">
   </div>
   <div class="tag-dropdown" id="tag-dropdown"></div>
 </div>
