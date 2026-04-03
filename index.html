@@ -78,7 +78,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .tag{font-size:11px;padding:2px 7px;border-radius:99px;background:#e8f0fe;color:#1a56db;cursor:pointer}
 .tag:hover{background:#d0e2fd}
-.card-open-link{font-size:11px;color:#1a56db;text-decoration:none;display:inline-block;margin-top:8px}
+.card-open-link{display:block;margin-top:10px;padding:7px 0;background:#f5f5f3;border-radius:8px;text-align:center;font-size:12px;font-weight:500;color:#1a1a1a;text-decoration:none;transition:background 0.1s}
+.card-open-link:hover{background:#e8e8e6}
 
 /* Status bar */
 .status-bar{background:#f5f5f3;border-top:0.5px solid rgba(0,0,0,0.08);padding:8px 16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#888}
@@ -557,7 +558,7 @@ function renderCards() {
         <div class="card-title" title="${b.title}">${b.title}</div>
         <div class="card-url">${b.url.replace(/^https?:\/\//, '').split('/')[0]}</div>
         <div class="tags">${(b.tags || []).map(t => `<span class="tag" onclick="setTag('${t}')">${t}</span>`).join('')}</div>
-        <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener">開く →</a>
+        <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener">開く ↗</a>
       </div>
     </div>
   `).join('');
