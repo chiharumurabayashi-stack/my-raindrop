@@ -375,6 +375,8 @@ function loadCache() {
       if (d.collections) state.collections = d.collections;
     }
   } catch(e) {}
+  state.activeCollection = localStorage.getItem('active_collection') || 'all';
+  state.activeTag = localStorage.getItem('active_tag') || null;
 }
 
 // ========== Firestore 保存 ==========
@@ -517,6 +519,8 @@ function closeSidebar() {
 }
 function setCollection(id) {
   state.activeCollection = id; state.activeTag = null;
+  localStorage.setItem('active_collection', id);
+  localStorage.removeItem('active_tag');
   renderSidebar(); renderCards();
   if (window.innerWidth <= 600) closeSidebar();
 }
@@ -612,6 +616,8 @@ async function colDrop(event, targetId) {
 }
 function setTag(t) {
   state.activeTag = state.activeTag === t ? null : t;
+  if (state.activeTag) localStorage.setItem('active_tag', state.activeTag);
+  else localStorage.removeItem('active_tag');
   renderSidebar(); renderCards();
   if (window.innerWidth <= 600) closeSidebar();
 }
