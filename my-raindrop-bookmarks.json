@@ -1,0 +1,1236 @@
+{
+  "bookmarks": [
+    {
+      "collection": "AI",
+      "url": "https://claude.ai/",
+      "tags": [
+        "AI",
+        "チャット"
+      ],
+      "thumb": "https://claude.ai/images/claude_ogimage.png",
+      "title": "Claude",
+      "id": 1775041865951
+    },
+    {
+      "title": "YouTube",
+      "thumb": "https://www.youtube.com/img/desktop/yt_1200.png",
+      "id": 1775042136760,
+      "collection": "ストリーミング",
+      "tags": [
+        "動画",
+        "Google",
+        "無料"
+      ],
+      "url": "https://www.youtube.com/"
+    },
+    {
+      "id": 1775042520378,
+      "thumb": "https://www.google.com/s2/favicons?domain=www.netflix.com&sz=128",
+      "title": "Netflix",
+      "url": "https://www.netflix.com",
+      "tags": [
+        "動画",
+        "サブスク"
+      ],
+      "collection": "ストリーミング"
+    },
+    {
+      "collection": "開発",
+      "tags": [
+        "dev"
+      ],
+      "url": "https://github.com",
+      "title": "GitHub",
+      "thumb": "https://images.ctfassets.net/8aevphvgewt8/4pe4eOtUJ0ARpZRE4fNekf/f52b1f9c52f059a33170229883731ed0/GH-Homepage-Universe-img.png",
+      "id": 3
+    },
+    {
+      "collection": "読み物",
+      "url": "https://zenn.dev",
+      "tags": [
+        "tech",
+        "blog",
+        "読み物"
+      ],
+      "thumb": "https://static.zenn.studio/images/logo-only-dark.png",
+      "title": "Zenn",
+      "id": 4
+    },
+    {
+      "id": 1775127072772,
+      "title": "Notion",
+      "thumb": "https://www.notion.so/images/meta/default.png",
+      "tags": [
+        "tool",
+        "メモ"
+      ],
+      "url": "https://www.notion.so/fbd5d18acc5f44e09b951ff3bcbb916c",
+      "collection": "ツール"
+    },
+    {
+      "collection": "ツール",
+      "url": "https://accounts.evernote.com/login",
+      "tags": [
+        "メモ",
+        "tool",
+        "Storage"
+      ],
+      "thumb": "https://www.google.com/s2/favicons?domain=accounts.evernote.com&sz=128",
+      "title": "Evernote",
+      "id": 1775127107287
+    },
+    {
+      "thumb": "https://cdn.sanity.io/images/599r6htc/regionalized/342e17642c7afa81206490b0dd21c3e5724ae040-2400x1260.png?w=1200&q=70&fit=max&auto=format",
+      "title": "Figma",
+      "id": 2,
+      "collection": "クリエイティブ",
+      "url": "https://figma.com",
+      "tags": [
+        "design",
+        "tool",
+        "UI"
+      ]
+    },
+    {
+      "url": "https://www.2nn.jp/",
+      "tags": [
+        "news",
+        "まとめ",
+        "掲示板"
+      ],
+      "collection": "読み物",
+      "id": 1775040170663,
+      "thumb": "https://www.2nn.jp/img/social/t_mini-a.png",
+      "title": "2NN"
+    },
+    {
+      "title": "Grok",
+      "thumb": "https://grok.com/icon-512x512.png",
+      "id": 1775041939002,
+      "collection": "AI",
+      "tags": [
+        "AI",
+        "チャット"
+      ],
+      "url": "https://grok.com/"
+    },
+    {
+      "collection": "AI",
+      "url": "https://chatgpt.com/",
+      "tags": [
+        "AI",
+        "チャット"
+      ],
+      "thumb": "https://cdn.openai.com/chatgpt/share-og.png",
+      "title": "ChatGPT",
+      "id": 1775040827933
+    },
+    {
+      "title": "Prime Video",
+      "thumb": "https://m.media-amazon.com/images/G/01/primevideo/seo/primevideo-seo-logo.png",
+      "id": 1775043083341,
+      "collection": "ストリーミング",
+      "tags": [
+        "動画",
+        "Amazon",
+        "サブスク"
+      ],
+      "url": "https://www.amazon.co.jp/gp/video/storefront"
+    },
+    {
+      "thumb": "https://www.google.com/s2/favicons?domain=open.spotify.com&sz=128",
+      "title": "Spotify – Web Player",
+      "id": 1775042189905,
+      "collection": "ストリーミング",
+      "url": "https://open.spotify.com/intl-ja/",
+      "tags": [
+        "音楽",
+        "サブスク"
+      ]
+    },
+    {
+      "id": 1775042968048,
+      "thumb": "https://www.google.com/s2/favicons?domain=abema.tv&sz=128",
+      "title": "ABEMA",
+      "url": "https://abema.tv/",
+      "tags": [
+        "news",
+        "動画",
+        "無料",
+        "テレビ"
+      ],
+      "collection": "ストリーミング"
+    },
+    {
+      "collection": "ストリーミング",
+      "url": "https://tver.jp/",
+      "tags": [
+        "動画",
+        "無料",
+        "テレビ"
+      ],
+      "thumb": "https://tver.jp/img/ogimg.png",
+      "title": "TVer - 無料で動画見放題",
+      "id": 1775042097106
+    },
+    {
+      "tags": [
+        "音楽",
+        "Google"
+      ],
+      "url": "https://music.youtube.com/",
+      "collection": "ストリーミング",
+      "id": 1775042322883,
+      "title": "YouTube Music",
+      "thumb": "https://www.google.com/s2/favicons?domain=music.youtube.com&sz=128"
+    },
+    {
+      "thumb": "https://www.google.com/s2/favicons?domain=macropolicystressradar-b3zmtf6hokanewfvnpfgdc.streamlit.app&sz=128",
+      "title": "Streamlit",
+      "id": 1775043299024,
+      "collection": "資産管理",
+      "url": "https://macropolicystressradar-b3zmtf6hokanewfvnpfgdc.streamlit.app/",
+      "tags": [
+        "tool",
+        "dev",
+        "Python",
+        "データ分析"
+      ]
+    },
+    {
+      "tags": [
+        "dev",
+        "Google",
+        "クラウド",
+        "tool"
+      ],
+      "url": "https://console.firebase.google.com/u/0/",
+      "collection": "開発",
+      "id": 1775043405062,
+      "title": "Firebase",
+      "thumb": "https://www.google.com/s2/favicons?domain=console.firebase.google.com&sz=128"
+    },
+    {
+      "url": "https://b.hatena.ne.jp/hotentry/all",
+      "tags": [
+        "news",
+        "まとめ",
+        "tech"
+      ],
+      "collection": "読み物",
+      "id": 1775043745007,
+      "thumb": "https://b.hatena.ne.jp/images/v4/public/app/ic-ios.svg",
+      "title": "はてなブックマーク - 人気エントリー - 総合"
+    },
+    {
+      "tags": [
+        "news",
+        "日本語"
+      ],
+      "url": "https://news.yahoo.co.jp/",
+      "collection": "読み物",
+      "id": 1775043822350,
+      "title": "Yahoo!ニュース",
+      "thumb": "https://www.google.com/s2/favicons?domain=news.yahoo.co.jp&sz=128"
+    },
+    {
+      "collection": "SNS",
+      "tags": [
+        "SNS",
+        "コミュニティ"
+      ],
+      "url": "https://www.facebook.com/",
+      "title": "Facebook",
+      "thumb": "https://static.xx.fbcdn.net/rsrc.php/yB/r/83zWJdc6PJI.webp",
+      "id": 1775044092234
+    },
+    {
+      "url": "https://x.com/home",
+      "tags": [
+        "SNS",
+        "Twitter"
+      ],
+      "collection": "SNS",
+      "id": 1775044136959,
+      "thumb": "https://abs.twimg.com/rweb/ssr/default/v2/og/image.png",
+      "title": "X (@home) on X"
+    },
+    {
+      "url": "https://civitai.com/",
+      "tags": [
+        "NSFW",
+        "AI画像",
+        "モデル"
+      ],
+      "collection": "18禁",
+      "id": 1775044242479,
+      "thumb": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/dd3364a5-22b3-4463-8470-02fdba219d2b/width=200,optimized=true/dd3364a5-22b3-4463-8470-02fdba219d2b.jpeg",
+      "title": "Civitai | Discover and Create AI Art"
+    },
+    {
+      "tags": [
+        "design",
+        "SNS",
+        "画像",
+        "インスピレーション"
+      ],
+      "url": "https://jp.pinterest.com/",
+      "collection": "SNS",
+      "id": 1775044339036,
+      "title": "ピンタレスト",
+      "thumb": "https://www.google.com/s2/favicons?domain=jp.pinterest.com&sz=128"
+    },
+    {
+      "collection": "SNS",
+      "url": "https://discord.com/channels/@me",
+      "tags": [
+        "SNS",
+        "チャット",
+        "コミュニティ"
+      ],
+      "thumb": "https://cdn.discordapp.com/assets/og_img_discord_home.png",
+      "title": "Discord - Group Chat That's All Fun & Games",
+      "id": 1775044495025
+    },
+    {
+      "url": "https://www.sbisec.co.jp/ETGate/?_ControlID=WPLEThmR001Control&_PageID=DefaultPID&_ActionID=DefaultAID&_DataStoreID=DSWPLEThmR001Control&OutSide=on&getFlg=on&_scpr=intpr=hn_logo",
+      "tags": [
+        "Money",
+        "株",
+        "証券",
+        "投資"
+      ],
+      "collection": "資産管理",
+      "id": 1775044865744,
+      "thumb": "https://sbisec.akamaized.net/sbisec/seeds/layout/images/category/domestic-option.svg",
+      "title": "SBI証券｜株・FX・投資信託・確定拠出年金・NISA"
+    },
+    {
+      "id": 1775045684500,
+      "title": "PayPal（ペイパル）公式サイト｜世界で使えるオンライン決済サービス | PayPal JP",
+      "thumb": "https://www.paypalobjects.com/marketing/web23/jp/quantum-leap/meta-images/homepage-uncookied-meta-size-all.jpg",
+      "tags": [
+        "Money",
+        "決済",
+        "送金"
+      ],
+      "url": "https://www.paypal.com/jp/home",
+      "collection": "資産管理"
+    },
+    {
+      "url": "https://connect.auone.jp/net/vwc/cca_lg_eu_nets/login?targeturl=https%3A%2F%2Fmy.au.com%2Faus%2Fhc-cs%2Flic%2FLIC0020001.hc",
+      "tags": [
+        "通信・スマホ",
+        "au",
+        "携帯"
+      ],
+      "collection": "生活",
+      "id": 1775046199560,
+      "thumb": "https://www.google.com/s2/favicons?domain=connect.auone.jp&sz=128",
+      "title": "au ID"
+    },
+    {
+      "tags": [
+        "通信・スマホ",
+        "インターネット"
+      ],
+      "url": "https://mypage.sso.biglobe.ne.jp/",
+      "collection": "生活",
+      "id": 1775046342042,
+      "title": "マイページ | BIGLOBE",
+      "thumb": "https://mypage.sso.biglobe.ne.jp/va/image/mypage/common/icon/user.png"
+    },
+    {
+      "url": "https://portal.smaden.com/member/login",
+      "tags": [
+        "ライフライン",
+        "電気",
+        "光熱費"
+      ],
+      "collection": "生活",
+      "id": 1775046454334,
+      "thumb": "https://portal.smaden.com/member/images/common/icon_loading.png",
+      "title": "スマ電"
+    },
+    {
+      "thumb": "https://tt.tanaka.jp/common/images/top_panel_08_pc.jpg",
+      "title": "田中貴金属の純金積立｜田中貴金属 総合口座",
+      "id": 1775046503827,
+      "collection": "資産管理",
+      "url": "https://tt.tanaka.jp/",
+      "tags": [
+        "Money",
+        "金",
+        "積立",
+        "投資"
+      ]
+    },
+    {
+      "url": "https://moneyforward.com/",
+      "tags": [
+        "Money",
+        "家計簿",
+        "クラウド会計"
+      ],
+      "collection": "資産管理",
+      "id": 1775046536252,
+      "thumb": "https://moneyforward.com/assets/home/ogp_corporate_image.png",
+      "title": "マネーフォワード｜家計簿アプリやクラウド会計ソフト"
+    },
+    {
+      "tags": [
+        "Money",
+        "仮想通貨",
+        "ビットコイン",
+        "暗号資産"
+      ],
+      "url": "https://coincheck.com/ja/exchange",
+      "collection": "資産管理",
+      "id": 1775046573805,
+      "title": "ビットコイン取引所｜暗号資産（仮想通貨）ビットコイン（Bitcoin）の購入/取引所【Coincheck（コインチェック）】",
+      "thumb": "https://coincheck.com/images/ogp/coincheck_ogp_large.png"
+    },
+    {
+      "thumb": "https://www.fukuokabank.co.jp/common/img/common/head_logo.png",
+      "title": "インターネットバンキングログイン | 福岡銀行",
+      "id": 1775046603272,
+      "collection": "資産管理",
+      "url": "https://www.fukuokabank.co.jp/personal/service/directbanking/iblogin/",
+      "tags": [
+        "Money",
+        "銀行",
+        "ネットバンキング"
+      ]
+    },
+    {
+      "url": "https://www.sevenbank.co.jp/",
+      "tags": [
+        "Money",
+        "銀行",
+        "ATM"
+      ],
+      "collection": "資産管理",
+      "id": 1775046631714,
+      "thumb": "https://www.sevenbank.co.jp/shared2022/images/img_og_01.jpg",
+      "title": "セブン銀行"
+    },
+    {
+      "thumb": "https://www3.vpass.ne.jp/static/responsive/img/mem/logo/companyLogo_050.png",
+      "title": "カード会員の方トップ｜福岡銀行VISAカード",
+      "id": 1775046710352,
+      "collection": "資産管理",
+      "url": "https://www3.vpass.ne.jp/mem/top/index.jsp?cc=050",
+      "tags": [
+        "Money",
+        "クレジットカード",
+        "VISA"
+      ]
+    },
+    {
+      "tags": [
+        "Google",
+        "AI",
+        "チャット"
+      ],
+      "url": "https://gemini.google.com/app?hl=ja",
+      "collection": "AI",
+      "id": 1775056122344,
+      "title": "Gemini",
+      "thumb": "https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128"
+    },
+    {
+      "id": 1775056334800,
+      "thumb": "https://www.google.com/s2/favicons?domain=labs.google&sz=128",
+      "title": "Flow",
+      "url": "https://labs.google/fx/ja/tools/flow",
+      "tags": [
+        "Google",
+        "AI",
+        "動画生成"
+      ],
+      "collection": "AI"
+    },
+    {
+      "thumb": "https://sukebei.nyaa.si/static/img/avatar/default.png",
+      "title": "Browse :: Sukebei",
+      "id": 1775056483334,
+      "collection": "18禁",
+      "url": "https://sukebei.nyaa.si/",
+      "tags": [
+        "Torrent",
+        "NSFW",
+        "アニメ"
+      ]
+    },
+    {
+      "thumb": "https://nyaa.si/static/img/avatar/default.png",
+      "title": "Browse :: Nyaa",
+      "id": 1775056522716,
+      "collection": "ダウンロード",
+      "url": "https://nyaa.si/",
+      "tags": [
+        "Torrent",
+        "アニメ"
+      ]
+    },
+    {
+      "id": 1775056548434,
+      "title": "The Pirate Bay - The galaxy's most resilient bittorrent site",
+      "thumb": "https://torrindex.net/images/epv/728t.png",
+      "tags": [
+        "Torrent",
+        "ファイル共有"
+      ],
+      "url": "https://thepiratebay.org/browse.php",
+      "collection": "ダウンロード"
+    },
+    {
+      "id": 1775056566547,
+      "title": "https://www.tokyotosho.info/",
+      "thumb": "https://gcp.ttcdn.info/cat_jav5.png",
+      "tags": [
+        "Torrent",
+        "アニメ",
+        "NSFW"
+      ],
+      "url": "https://www.tokyotosho.info/",
+      "collection": "18禁"
+    },
+    {
+      "tags": [
+        "美容院",
+        "予約",
+        "ライフライン"
+      ],
+      "url": "https://beauty.hotpepper.jp/",
+      "collection": "生活",
+      "id": 1775056850557,
+      "title": "ホットペッパービューティー｜美容院・美容室・ヘアサロンの検索予約サイト",
+      "thumb": "https://imgbp.hotp.jp/CSP/img/common/smb/logo_s.png?switch=2026032510"
+    },
+    {
+      "title": "キャンプ場 なっぷ",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.nap-camp.com&sz=128",
+      "id": 1775056892101,
+      "collection": "生活",
+      "tags": [
+        "キャンプ",
+        "アウトドア",
+        "予約"
+      ],
+      "url": "https://www.nap-camp.com/"
+    },
+    {
+      "thumb": "https://www.google.com/s2/favicons?domain=demae-can.com&sz=128",
+      "title": "出前館",
+      "id": 1775056935451,
+      "collection": "生活",
+      "url": "https://demae-can.com/search/delivery/40211030000?orderTyp=0",
+      "tags": [
+        "飲食",
+        "デリバリー",
+        "フード"
+      ]
+    },
+    {
+      "collection": "生活",
+      "tags": [
+        "飲食",
+        "ピザ",
+        "デリバリー"
+      ],
+      "url": "https://www.pizzahut.jp/",
+      "title": "ピザハット",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.pizzahut.jp&sz=128",
+      "id": 1775056958019
+    },
+    {
+      "collection": "生活",
+      "tags": [
+        "飲食",
+        "ピザ",
+        "デリバリー"
+      ],
+      "url": "https://www.pizza-pockets.jp/",
+      "title": "ピザポケット",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.pizza-pockets.jp&sz=128",
+      "id": 1775056976898
+    },
+    {
+      "title": "9animetv",
+      "thumb": "https://www.google.com/s2/favicons?domain=9animetv.to&sz=128",
+      "id": 1775057032324,
+      "collection": "ストリーミング",
+      "tags": [
+        "動画",
+        "アニメ",
+        "無料"
+      ],
+      "url": "https://9animetv.to/home"
+    },
+    {
+      "id": 1775057077476,
+      "title": "Aniwaves",
+      "thumb": "https://www.google.com/s2/favicons?domain=aniwaves.ru&sz=128",
+      "tags": [
+        "動画",
+        "アニメ",
+        "無料"
+      ],
+      "url": "https://aniwaves.ru/home",
+      "collection": "ストリーミング"
+    },
+    {
+      "url": "https://anitube.pro/",
+      "tags": [
+        "動画",
+        "アニメ",
+        "無料"
+      ],
+      "collection": "ストリーミング",
+      "id": 1775057107011,
+      "thumb": "https://www.google.com/s2/favicons?domain=anitube.pro&sz=128",
+      "title": "Anitube"
+    },
+    {
+      "collection": "AI",
+      "tags": [
+        "AI",
+        "Google",
+        "メモ"
+      ],
+      "url": "https://notebooklm.google.com/",
+      "title": "NotebookLM",
+      "thumb": "https://www.google.com/s2/favicons?domain=notebooklm.google.com&sz=128",
+      "id": 1775057156774
+    },
+    {
+      "id": 1775057237198,
+      "title": "Google Keep",
+      "thumb": "https://www.google.com/s2/favicons?domain=keep.google.com&sz=128",
+      "tags": [
+        "Google",
+        "tool",
+        "メモ"
+      ],
+      "url": "https://keep.google.com/u/0/",
+      "collection": "ツール"
+    },
+    {
+      "id": 1775057276906,
+      "thumb": "https://www.google.com/s2/favicons?domain=trends.google.co.jp&sz=128",
+      "title": "Google トレンド",
+      "url": "https://trends.google.co.jp/trends?geo=JP&hl=ja",
+      "tags": [
+        "Google",
+        "tool",
+        "リサーチ",
+        "データ"
+      ],
+      "collection": "ツール"
+    },
+    {
+      "id": 1775057367815,
+      "title": "Google Colab",
+      "thumb": "https://www.google.com/s2/favicons?domain=colab.research.google.com&sz=128",
+      "tags": [
+        "Google",
+        "tool",
+        "Python",
+        "dev",
+        "データ分析"
+      ],
+      "url": "https://colab.research.google.com/",
+      "collection": "開発"
+    },
+    {
+      "tags": [
+        "Amazon",
+        "通販"
+      ],
+      "url": "https://www.amazon.co.jp/ref=nav_logo",
+      "collection": "ショッピング",
+      "id": 1775057428964,
+      "title": "Amazon",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.amazon.co.jp&sz=128"
+    },
+    {
+      "title": "ZOZO",
+      "thumb": "https://www.google.com/s2/favicons?domain=zozo.jp&sz=128",
+      "id": 1775057474685,
+      "collection": "ショッピング",
+      "tags": [
+        "ファッション",
+        "通販"
+      ],
+      "url": "https://zozo.jp/"
+    },
+    {
+      "tags": [
+        "通販",
+        "ポイント"
+      ],
+      "url": "https://www.rakuten.co.jp/",
+      "collection": "ショッピング",
+      "id": 1775057490383,
+      "title": "楽天市場",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.rakuten.co.jp&sz=128"
+    },
+    {
+      "title": "アイドラッグストア",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.idrugstore.jp&sz=128",
+      "id": 1775057905015,
+      "collection": "ショッピング",
+      "tags": [
+        "薬",
+        "ドラッグストア",
+        "通販"
+      ],
+      "url": "https://www.idrugstore.jp/login?ReturnUrl=%2Fmypage"
+    },
+    {
+      "id": 1775057944632,
+      "thumb": "https://www.google.com/s2/favicons?domain=jp.iherb.com&sz=128",
+      "title": "iHerb",
+      "url": "https://jp.iherb.com/",
+      "tags": [
+        "サプリ",
+        "健康",
+        "通販"
+      ],
+      "collection": "ショッピング"
+    },
+    {
+      "thumb": "https://www.google.com/s2/favicons?domain=www.shopping-charm.jp&sz=128",
+      "title": "チャーム",
+      "id": 1775057977235,
+      "collection": "ショッピング",
+      "url": "https://www.shopping-charm.jp/",
+      "tags": [
+        "ペット",
+        "アクアリウム",
+        "通販"
+      ]
+    },
+    {
+      "id": 1775125599814,
+      "title": "OpenWork",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.openwork.jp&sz=128",
+      "tags": [
+        "転職",
+        "口コミ",
+        "企業情報"
+      ],
+      "url": "https://www.openwork.jp/my_top",
+      "collection": "転職"
+    },
+    {
+      "id": 1775126393670,
+      "thumb": "https://www.google.com/s2/favicons?domain=chiharumurabayashi-stack.github.io&sz=128",
+      "title": "Portfolio | Designer & Director",
+      "url": "https://chiharumurabayashi-stack.github.io/portfolio/",
+      "tags": [
+        "ポートフォリオ",
+        "design",
+        "dev"
+      ],
+      "collection": "転職"
+    },
+    {
+      "collection": "開発",
+      "tags": [
+        "tool",
+        "ホスティング",
+        "dev",
+        "デプロイ"
+      ],
+      "url": "https://app.netlify.com/drop",
+      "title": "Netlify",
+      "thumb": "https://www.google.com/s2/favicons?domain=app.netlify.com&sz=128",
+      "id": 1775126445772
+    },
+    {
+      "tags": [
+        "転職",
+        "エージェント",
+        "求人"
+      ],
+      "url": "https://econ.workport.co.jp/new/cn_index.php?err=1",
+      "collection": "転職",
+      "id": 1775126473411,
+      "title": "無料転職活動支援アプリ『eコンシェル』",
+      "thumb": "https://www.google.com/s2/favicons?domain=econ.workport.co.jp&sz=128"
+    },
+    {
+      "id": 1775126515846,
+      "thumb": "https://www.google.com/s2/favicons?domain=doda.jp&sz=128",
+      "title": "doda",
+      "url": "https://doda.jp/?usrclk=PC_logout_commonHeader_logo",
+      "tags": [
+        "転職",
+        "求人"
+      ],
+      "collection": "転職"
+    },
+    {
+      "tags": [
+        "転職",
+        "ハイクラス",
+        "求人"
+      ],
+      "url": "https://mid-tenshoku.com/?PK=4AC2D6",
+      "collection": "転職",
+      "id": 1775126543506,
+      "title": "転職｜30代、40代のハイクラス転職サイト【ミドルの転職】エン",
+      "thumb": "https://cdn.mid-tenshoku.com/imageFile/user/global/ogp_photo.png"
+    },
+    {
+      "collection": "ツール",
+      "url": "https://keeweb.info/",
+      "tags": [
+        "tool",
+        "パスワード管理",
+        "セキュリティ"
+      ],
+      "thumb": "https://www.google.com/s2/favicons?domain=keeweb.info&sz=128",
+      "title": "Free Password Manager Compatible with KeePass: KeeWeb",
+      "id": 1775126681435
+    },
+    {
+      "url": "https://onedrive.live.com/?view=1",
+      "tags": [
+        "tool",
+        "Microsoft",
+        "クラウド",
+        "ファイル共有"
+      ],
+      "collection": "ツール",
+      "id": 1775126867679,
+      "thumb": "https://www.google.com/s2/favicons?domain=onedrive.live.com&sz=128",
+      "title": "個人用ファイル共有とクラウド ストレージ | Microsoft OneDrive"
+    },
+    {
+      "collection": "クリエイティブ",
+      "tags": [
+        "tool",
+        "画像編集",
+        "design"
+      ],
+      "url": "https://www.photopea.com/#",
+      "title": "Photopea | Online Photo Editor",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.photopea.com&sz=128",
+      "id": 1775126965797
+    },
+    {
+      "id": 1775127023630,
+      "thumb": "https://www.google.com/s2/favicons?domain=www.icloud.com&sz=128",
+      "title": "iCloud",
+      "url": "https://www.icloud.com/",
+      "tags": [
+        "tool",
+        "Apple",
+        "クラウド",
+        "ファイル共有"
+      ],
+      "collection": "ツール"
+    },
+    {
+      "tags": [
+        "design",
+        "CG"
+      ],
+      "url": "https://cgworld.jp/",
+      "collection": "クリエイティブ",
+      "id": 1775131368153,
+      "title": "CG・映像の専門情報サイト | CGWORLD.jp",
+      "thumb": "https://cgworld.jp/assets/image/common/og-image.png"
+    },
+    {
+      "id": 1775131615539,
+      "title": "3D人-3dnchu- CG系ツール・ニュース情報サイト！",
+      "thumb": "https://3dnchu.com/wp-content/uploads/3Dnchu_icon_bw_high-660x660.png",
+      "tags": [
+        "design",
+        "CG"
+      ],
+      "url": "https://3dnchu.com/",
+      "collection": "クリエイティブ"
+    },
+    {
+      "thumb": "https://moltbook.com/opengraph-image?5032a5c3759046dc",
+      "title": "moltbook - the front page of the agent internet",
+      "id": 1775131783445,
+      "collection": "読み物",
+      "url": "https://www.moltbook.com/",
+      "tags": [
+        "AI",
+        "news",
+        "tech"
+      ]
+    },
+    {
+      "collection": "読み物",
+      "tags": [
+        "RSS",
+        "news"
+      ],
+      "url": "https://feedly.com/i/my/me",
+      "title": "Stay ahead of the curve with Feedly AI",
+      "thumb": "https://s1.feedly.com/images/fx/og/default.png",
+      "id": 1775132071722
+    },
+    {
+      "tags": [
+        "CG",
+        "NSFW",
+        "R18"
+      ],
+      "url": "https://e-hentai.org/",
+      "collection": "18禁",
+      "id": 1775132600694,
+      "title": "E-Hentai Galleries - The Free Hentai Doujinshi, Manga and Image Gallery System",
+      "thumb": "https://ehgt.org/w/02/070/48981-p3347nng.webp"
+    },
+    {
+      "id": 1775132775321,
+      "thumb": "https://www.gstatic.com/images/icons/material/apps/fonts/1x/catalog/v5/opengraph_color.png",
+      "title": "Browse Fonts - Google Fonts",
+      "url": "https://fonts.google.com/",
+      "tags": [
+        "フォント",
+        "design",
+        "Google"
+      ],
+      "collection": "クリエイティブ"
+    },
+    {
+      "url": "https://www.chichi-pui.com/R18/",
+      "tags": [
+        "NSFW",
+        "AI画像",
+        "R18"
+      ],
+      "collection": "18禁",
+      "id": 1775044203590,
+      "thumb": "https://www.chichi-pui.com/static/images/ogp/image.7009162c368c.png",
+      "title": "エロ・R18のAI画像（イラスト・グラビア） | chichi-pui（ちちぷい）"
+    },
+    {
+      "title": "フォントフリー - 無料の日本語フリーフォント投稿サイト",
+      "thumb": "https://fontfree.me/wp-content/themes/fontfree/images/facebook.jpg",
+      "id": 1775132841495,
+      "collection": "クリエイティブ",
+      "tags": [
+        "フォント",
+        "design"
+      ],
+      "url": "https://fontfree.me/"
+    },
+    {
+      "collection": "開発",
+      "tags": [
+        "AI",
+        "dev"
+      ],
+      "url": "https://code.claude.com/docs/ja/best-practices",
+      "title": "Claude Code のベストプラクティス - Claude Code Docs",
+      "thumb": "https://www.google.com/s2/favicons?domain=code.claude.com&sz=128",
+      "id": 1775133655625
+    },
+    {
+      "id": 1775132870806,
+      "thumb": "https://rollin.co.jp/gousei-font/wp-content/uploads/2022/03/ogp.png",
+      "title": "合成フォントダウンロードセンター",
+      "url": "https://rollin.co.jp/gousei-font/",
+      "tags": [
+        "フォント",
+        "design"
+      ],
+      "collection": "クリエイティブ"
+    },
+    {
+      "collection": "開発",
+      "tags": [
+        "AI",
+        "dev"
+      ],
+      "url": "https://qiita.com/masakinihirota/items/b1c979cda8518f8b6695",
+      "title": "Antigravityの「青いボタン」をポチポチ押すのはもう終わり！ターミナル自動承認でAntigravityで楽々開発を実現しよう ＋追記 Antigravity０％問題 #Antigravity - Qiita",
+      "thumb": "https://www.google.com/s2/favicons?domain=qiita.com&sz=128",
+      "id": 1775133680121
+    },
+    {
+      "collection": "ツール",
+      "tags": ["tool", "動画", "ダウンロード"],
+      "url": "https://www.savethevideo.com/home",
+      "title": "Online Video Downloader and Converter [Updated 2026]",
+      "thumb": "https://www.google.com/s2/favicons?domain=www.savethevideo.com&sz=128",
+      "id": 1775133744262
+    },
+    {
+      "id": 1775218708758,
+      "thumb": "https://www.google.com/s2/favicons?domain=romsns.com&sz=128",
+      "title": "ROMsNS - Free Download Nintendo Switch ROMs NSP & XCI",
+      "url": "https://romsns.com/",
+      "tags": [
+        "rom",
+        "game"
+      ],
+      "collection": "ゲーム"
+    },
+    {
+      "collection": "ゲーム",
+      "tags": [
+        "tool",
+        "game"
+      ],
+      "url": "https://ps2par-pnach.blogspot.com/",
+      "title": "PS2PARコード→pnach用コード変換スクリプト",
+      "thumb": "https://www.google.com/s2/favicons?domain=ps2par-pnach.blogspot.com&sz=128",
+      "id": 1775218784368
+    },
+    {
+      "url": "https://www.marcrobledo.com/savegame-editors/zelda-botw/",
+      "tags": [
+        "tool",
+        "game"
+      ],
+      "collection": "ゲーム",
+      "id": 1775218833996,
+      "thumb": "https://www.google.com/s2/favicons?domain=www.marcrobledo.com&sz=128",
+      "title": "Savegame Editor – The legend of Zelda: Breath of the wild"
+    },
+    {
+      "id": 1775218926002,
+      "thumb": "https://www.google.com/s2/favicons?domain=thumbnails.libretro.com&sz=128",
+      "title": "Index of /",
+      "url": "https://thumbnails.libretro.com/",
+      "tags": [
+        "game",
+        "tool"
+      ],
+      "collection": "ゲーム"
+    },
+    {
+      "title": "Gamepad Tester - Check Controllers and Joysticks Online",
+      "thumb": "https://www.google.com/s2/favicons?domain=hardwaretester.com&sz=128",
+      "id": 1775219808743,
+      "collection": "ゲーム",
+      "tags": [
+        "game",
+        "tool"
+      ],
+      "url": "https://hardwaretester.com/gamepad"
+    },
+    {
+      "id": 1775219861891,
+      "thumb": "https://www.google.com/s2/favicons?domain=www.reddit.com&sz=128",
+      "title": "海賊行為：荒波を航海する",
+      "url": "https://www.reddit.com/r/Piracy/?tl=ja",
+      "tags": ["Torrent", "ガイド", "Reddit"],
+      "collection": "ダウンロード"
+    },
+    {
+      "collection": "ダウンロード",
+      "url": "https://www.reddit.com/r/PiratedGames/?tl=ja",
+      "tags": ["ゲーム", "ガイド", "Reddit"],
+      "thumb": "https://www.google.com/s2/favicons?domain=www.reddit.com&sz=128",
+      "title": "r/PiratedGames - 海賊版ゲームとクラックについて話そうぜ！",
+      "id": 1775219900200
+    },
+    {
+      "collection": "ゲーム",
+      "tags": [
+        "game",
+        "rom"
+      ],
+      "url": "https://romsfun.com/",
+      "title": "ROMSFUN - Free ROMs Download – Retro & Console Games",
+      "thumb": "https://www.google.com/s2/favicons?domain=romsfun.com&sz=128",
+      "id": 1775219976411
+    },
+    {
+      "collection": "資産管理",
+      "url": "https://jp.tradingview.com/",
+      "tags": ["Money", "株", "チャート", "投資"],
+      "thumb": "https://www.google.com/s2/favicons?domain=jp.tradingview.com&sz=128",
+      "title": "TradingView – すべての市場を追跡",
+      "id": 1775220340507
+    },
+    {
+      "tags": [
+        "design"
+      ],
+      "url": "https://muuuuu.org/",
+      "collection": "クリエイティブ",
+      "id": 1775220637020,
+      "title": "Webデザインギャラリー・参考サイト集・アワード｜MUUUUU.ORG",
+      "thumb": "https://www.google.com/s2/favicons?domain=muuuuu.org&sz=128"
+    },
+    {
+      "thumb": "https://www.google.com/s2/favicons?domain=archive.org&sz=128",
+      "title": "dc-chd-zstd-redump directory listing",
+      "id": 1775258517263,
+      "collection": "ゲーム",
+      "url": "https://archive.org/download/dc-chd-zstd-redump/dc-chd-zstd/",
+      "tags": [
+        "rom",
+        "game"
+      ]
+    },
+    {
+      "collection": "ゲーム",
+      "url": "https://archive.org/download/SSCHD-Arquivista",
+      "tags": [
+        "rom",
+        "game"
+      ],
+      "thumb": "https://www.google.com/s2/favicons?domain=archive.org&sz=128",
+      "title": "SSCHD-Arquivista directory listing",
+      "id": 1775258601797
+    },
+    {
+      "title": "sony_playstation2_n directory listing",
+      "thumb": "https://www.google.com/s2/favicons?domain=archive.org&sz=128",
+      "id": 1775259501475,
+      "collection": "ゲーム",
+      "tags": [
+        "rom",
+        "game"
+      ],
+      "url": "https://archive.org/download/sony_playstation2_n"
+    },
+    {
+      "id": 1775263039014,
+      "title": "AI機能搭載のRSSリーダーを作った",
+      "thumb": "https://www.google.com/s2/favicons?domain=zenn.dev&sz=128",
+      "tags": ["dev", "AI"],
+      "url": "https://zenn.dev/babarot/articles/ai-rss-reader-oksskolten",
+      "collection": "開発"
+    },
+    {
+      "id": 1775273639559,
+      "thumb": "https://www.google.com/s2/favicons?domain=zenn.dev&sz=128",
+      "title": "Claude CodeでAI RSSリーダーを作ったら、その日にInoreaderを解約した",
+      "url": "https://zenn.dev/caphtech/articles/feed-curator-ai-rss-with-claude-code",
+      "tags": ["dev", "AI"],
+      "collection": "開発"
+    },
+    {
+      "thumb": "https://www.google.com/s2/favicons?domain=news.ceek.jp&sz=128",
+      "title": "Ceek.jp News : 最新ニュース検索",
+      "id": 1775301732002,
+      "collection": "読み物",
+      "url": "https://news.ceek.jp/",
+      "tags": [
+        "news"
+      ]
+    },
+    {
+      "collection": "開発",
+      "tags": ["dev", "ホスティング", "デプロイ"],
+      "url": "https://fly.io/app/auth/cli/677667797a786b6c646b6562706a6b66326671646b7a697233656c6770626161",
+      "title": "CLI Sign in · Fly",
+      "thumb": "https://www.google.com/s2/favicons?domain=fly.io&sz=128",
+      "id": 1775359514569
+    },
+    {
+      "id": 1775361598599,
+      "thumb": "https://www.google.com/s2/favicons?domain=rss-small-frost-7731.fly.dev&sz=128",
+      "title": "RSSリーダー",
+      "url": "https://rss-small-frost-7731.fly.dev/",
+      "tags": [
+        "news",
+        "RSS"
+      ],
+      "collection": "読み物"
+    },
+    {
+      "title": "RSSフィードジェネレーター、ウィジェット、ボット：Web & Social feeds | RSS.app",
+      "thumb": "https://www.google.com/s2/favicons?domain=rss.app&sz=128",
+      "id": 1775389231147,
+      "collection": "ツール",
+      "tags": [
+        "RSS"
+      ],
+      "url": "https://rss.app/ja"
+    }
+  ],
+  "collections": [
+    {
+      "icon": "📌",
+      "id": "all",
+      "name": "すべて"
+    },
+    {
+      "id": "ストリーミング",
+      "name": "ストリーミング",
+      "icon": "🎵"
+    },
+    {
+      "icon": "💻",
+      "id": "AI",
+      "name": "AI"
+    },
+    {
+      "icon": "⬇️",
+      "id": "ダウンロード",
+      "name": "ダウンロード"
+    },
+    {
+      "name": "読み物",
+      "id": "読み物",
+      "icon": "📰"
+    },
+    {
+      "id": "クリエイティブ",
+      "name": "クリエイティブ",
+      "icon": "🎨"
+    },
+    {
+      "id": "SNS",
+      "name": "SNS",
+      "icon": "🗨"
+    },
+    {
+      "icon": "💻",
+      "id": "開発",
+      "name": "開発"
+    },
+    {
+      "icon": "📁",
+      "id": "資産管理",
+      "name": "資産管理"
+    },
+    {
+      "name": "生活",
+      "id": "生活",
+      "icon": "🏠"
+    },
+    {
+      "name": "ツール",
+      "id": "ツール",
+      "icon": "🧰"
+    },
+    {
+      "id": "ショッピング",
+      "name": "ショッピング",
+      "icon": "🛒"
+    },
+    {
+      "id": "転職",
+      "name": "転職",
+      "icon": "🧑"
+    },
+    {
+      "id": "ゲーム",
+      "name": "ゲーム",
+      "icon": "🎮"
+    },
+    {
+      "id": "18禁",
+      "name": "18禁",
+      "icon": "🔞"
+    }
+  ]
+}
