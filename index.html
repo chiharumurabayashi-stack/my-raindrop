@@ -128,13 +128,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .empty{text-align:center;padding:48px 16px;color:#bbb;grid-column:1/-1}
 .empty .emoji{font-size:32px;margin-bottom:10px}
 
+/* AI button */
+.btn-ai{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-color:transparent;display:flex;align-items:center;gap:5px}
+.btn-ai:hover{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+.btn-ai:disabled{opacity:0.55;cursor:not-allowed}
+.ai-summary{font-size:12px;color:#555;background:#f5f5f3;border-radius:8px;padding:8px 10px;line-height:1.6;margin-top:2px}
+.card-summary{font-size:11px;color:#777;padding:0 10px 8px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
 /* PWA install banner */
 #install-banner{display:none;background:#1a1a1a;color:#fff;padding:10px 16px;font-size:13px;align-items:center;gap:10px;justify-content:space-between}
 #install-banner button{padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#fff;cursor:pointer;font-size:12px}
 #install-banner button.primary{background:#fff;color:#1a1a1a}
 
+/* Hamburger button */
+.hamburger-btn{display:none;align-items:center;justify-content:center;width:36px;height:36px;border:none;background:transparent;cursor:pointer;border-radius:8px;color:#1a1a1a;flex-shrink:0}
+.hamburger-btn:hover{background:#f0f0ee}
+.hamburger-btn svg{display:block}
+
+/* Sidebar overlay */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200}
+.sidebar-overlay.open{display:block}
+
 @media (max-width: 600px) {
-  .sidebar{display:none}
+  .hamburger-btn{display:flex}
+  .sidebar{
+    position:fixed;left:0;top:0;bottom:0;z-index:300;
+    transform:translateX(-100%);
+    transition:transform 0.25s ease;
+    box-shadow:none;
+  }
+  .sidebar.open{
+    transform:translateX(0);
+    box-shadow:4px 0 24px rgba(0,0,0,0.18);
+  }
   .grid{grid-template-columns:1fr 1fr}
 }
 </style>
@@ -149,8 +175,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   </div>
 </div>
 
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
 <div class="app">
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
       MyRaindrop
@@ -179,11 +206,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <button class="btn btn-sm btn-block" onclick="exportJSON()">📥 JSONエクスポート</button>
       <button class="btn btn-sm btn-block" onclick="document.getElementById('import-file').click()">📤 JSONインポート</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="btn btn-sm btn-block" onclick="openSettings()" style="margin-top:4px">⚙️ 設定</button>
     </div>
   </div>
 
   <div class="main">
     <div class="topbar">
+      <button class="hamburger-btn" id="hamburger-btn" aria-label="メニュー">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/>
+        </svg>
+      </button>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input type="text" placeholder="ブックマークを検索..." id="search-input" oninput="renderCards()">
@@ -209,6 +242,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="field">
       <label>タイトル <span id="title-fetching" style="color:#aaa;font-weight:normal;display:none">取得中...</span></label>
       <input id="f-title" type="text" placeholder="サイト名">
+    </div>
+    <div class="field" style="margin-bottom:8px">
+      <button id="btn-ai-fill" class="btn btn-ai" onclick="aiFill()" style="width:100%">✨ AIでタグ・コレクション・要約を自動入力</button>
+    </div>
+    <div class="field" id="field-summary" style="display:none">
+      <label>AI要約</label>
+      <div class="ai-summary" id="f-summary"></div>
     </div>
     <div class="field"><label>コレクション</label><select id="f-col"></select></div>
     <div class="field" id="field-tags">
@@ -242,6 +282,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-tag')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveTagRename()">変更する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 設定モーダル -->
+<div id="modal-settings" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3>設定</h3>
+    <div class="field">
+      <label>Gemini API キー</label>
+      <input id="f-gemini-key" type="password" placeholder="AIzaSy...">
+      <div style="font-size:11px;color:#aaa;margin-top:4px">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:#6366f1">Google AI Studio</a> で無料取得できます（1日1500リクエスト）
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-settings')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveSettings()">保存</button>
     </div>
   </div>
 </div>
@@ -449,7 +507,19 @@ function renderSidebar() {
   requestAnimationFrame(() => { if (typeof applySection === 'function') { applySection('col'); applySection('tag'); } });
 }
 
-function setCollection(id) { state.activeCollection = id; state.activeTag = null; renderSidebar(); renderCards(); }
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+function setCollection(id) {
+  state.activeCollection = id; state.activeTag = null;
+  renderSidebar(); renderCards();
+  if (window.innerWidth <= 600) closeSidebar();
+}
 
 // ========== ドラッグ＆ドロップ ==========
 function dragStart(event, bookmarkId) {
@@ -540,7 +610,11 @@ async function colDrop(event, targetId) {
   renderCards();
   await saveToFirestore();
 }
-function setTag(t) { state.activeTag = state.activeTag === t ? null : t; renderSidebar(); renderCards(); }
+function setTag(t) {
+  state.activeTag = state.activeTag === t ? null : t;
+  renderSidebar(); renderCards();
+  if (window.innerWidth <= 600) closeSidebar();
+}
 
 function renderCards() {
   const q = (document.getElementById('search-input').value || '').toLowerCase();
@@ -577,6 +651,7 @@ function renderCards() {
         <div class="tags">${(b.tags || []).map(t => `<span class="tag" onclick="setTag('${t}')">${t}</span>`).join('')}</div>
         <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener">開く ↗</a>
       </div>
+      ${b.summary ? `<div class="card-summary">${b.summary}</div>` : ''}
     </div>
   `).join('');
 }
@@ -764,6 +839,10 @@ async function openAddModal() {
   document.getElementById('f-url').value = '';
   document.getElementById('f-title').value = '';
   document.getElementById('title-fetching').style.display = 'none';
+  document.getElementById('f-summary').textContent = '';
+  document.getElementById('field-summary').style.display = 'none';
+  document.getElementById('btn-ai-fill').disabled = false;
+  document.getElementById('btn-ai-fill').textContent = '✨ AIでタグ・コレクション・要約を自動入力';
   initTagInput([]);
   const sel = document.getElementById('f-col');
   const activeCol = state.activeCollection === 'all' ? '' : state.activeCollection;
@@ -791,6 +870,15 @@ function openEdit(id) {
   document.getElementById('modal-title').textContent = 'ブックマークを編集';
   document.getElementById('f-url').value = b.url;
   document.getElementById('f-title').value = b.title;
+  document.getElementById('btn-ai-fill').disabled = false;
+  document.getElementById('btn-ai-fill').textContent = '✨ AIでタグ・コレクション・要約を自動入力';
+  if (b.summary) {
+    document.getElementById('f-summary').textContent = b.summary;
+    document.getElementById('field-summary').style.display = 'block';
+  } else {
+    document.getElementById('f-summary').textContent = '';
+    document.getElementById('field-summary').style.display = 'none';
+  }
   initTagInput(b.tags || []);
   const sel = document.getElementById('f-col');
   sel.innerHTML = `<option value=""${!b.collection ? ' selected' : ''}>未分類</option>` +
@@ -808,18 +896,138 @@ async function saveBookmark() {
   const inputVal = document.getElementById('f-tags-input').value.trim();
   if (inputVal && !selectedTags.includes(inputVal)) selectedTags.push(inputVal);
   const tags = [...selectedTags];
+  const summary = document.getElementById('f-summary').textContent.trim() || '';
   if (!url) return;
   if (state.editingId) {
     const b = state.bookmarks.find(x => x.id === state.editingId);
-    if (b) Object.assign(b, { url, title, collection: col, tags });
+    if (b) Object.assign(b, { url, title, collection: col, tags, ...(summary && { summary }) });
   } else {
-    state.bookmarks.push({ id: Date.now(), url, title, collection: col, tags, thumb: pendingThumb || randEmoji() });
+    state.bookmarks.push({ id: Date.now(), url, title, collection: col, tags, thumb: pendingThumb || randEmoji(), ...(summary && { summary }) });
     pendingThumb = null;
   }
   closeModal('modal-add');
   renderSidebar();
   renderCards();
   await saveToFirestore();
+}
+
+// ========== 設定 ==========
+function openSettings() {
+  document.getElementById('f-gemini-key').value = localStorage.getItem('gemini_key') || '';
+  document.getElementById('modal-settings').style.display = 'flex';
+}
+function saveSettings() {
+  const key = document.getElementById('f-gemini-key').value.trim();
+  if (key) localStorage.setItem('gemini_key', key);
+  else localStorage.removeItem('gemini_key');
+  closeModal('modal-settings');
+}
+
+// ========== AI 自動入力 ==========
+async function aiFill() {
+  const url = document.getElementById('f-url').value.trim();
+  const title = document.getElementById('f-title').value.trim();
+  if (!url) { alert('先に URL を入力してください。'); return; }
+
+  const apiKey = localStorage.getItem('gemini_key');
+  if (!apiKey) {
+    alert('Gemini API キーが設定されていません。\nサイドバーの「⚙️ 設定」から入力してください。');
+    openSettings();
+    return;
+  }
+
+  const btn = document.getElementById('btn-ai-fill');
+  btn.disabled = true;
+  btn.textContent = '✨ 解析中...';
+
+  try {
+    // ページ本文を取得
+    let pageText = '';
+    try {
+      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        // script/style除去して本文抽出
+        doc.querySelectorAll('script,style,nav,footer,header').forEach(el => el.remove());
+        pageText = (doc.body?.innerText || doc.body?.textContent || '').replace(/\s+/g, ' ').slice(0, 3000);
+      }
+    } catch(e) {}
+
+    const existingCollections = state.collections.filter(c => c.id !== 'all').map(c => c.name).join(', ');
+    const existingTags = [...new Set(state.bookmarks.flatMap(b => b.tags || []))].slice(0, 40).join(', ');
+
+    const prompt = `以下のWebページについて、ブックマーク管理アプリ用にJSON形式で回答してください。
+
+URL: ${url}
+タイトル: ${title || '（未取得）'}
+本文抜粋: ${pageText || '（取得できませんでした）'}
+
+既存のコレクション: ${existingCollections}
+既存のタグ: ${existingTags}
+
+以下のJSON形式で回答してください（他の文字は一切含めない）:
+{
+  "collection": "最も適切なコレクション名（既存から選ぶか、新規名を提案）",
+  "tags": ["タグ1", "タグ2", "タグ3"],
+  "summary": "このページの内容を日本語で2〜3文で要約"
+}
+
+注意:
+- collectionは既存のコレクションから最適なものを選ぶ。どれも合わない場合は新しい名前を提案する
+- tagsは既存タグを優先しつつ、内容に合ったものを3〜5個
+- summaryは日本語で、「このページは〜」という形で簡潔に`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
+    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // JSONブロック抽出
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('レスポンスの解析に失敗しました');
+    const result = JSON.parse(match[0]);
+
+    // コレクション選択を更新
+    const sel = document.getElementById('f-col');
+    const existingOpt = [...sel.options].find(o => o.value === result.collection || o.text === result.collection);
+    if (existingOpt) {
+      sel.value = existingOpt.value;
+    } else if (result.collection) {
+      // 新規コレクションとして追加オプションを挿入
+      const opt = document.createElement('option');
+      opt.value = result.collection;
+      opt.text = `${result.collection}（新規）`;
+      opt.selected = true;
+      sel.appendChild(opt);
+    }
+
+    // タグをセット
+    if (Array.isArray(result.tags)) {
+      initTagInput(result.tags);
+    }
+
+    // 要約を表示
+    if (result.summary) {
+      document.getElementById('f-summary').textContent = result.summary;
+      document.getElementById('field-summary').style.display = 'block';
+    }
+
+  } catch(e) {
+    alert(`AI自動入力に失敗しました:\n${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ AIでタグ・コレクション・要約を自動入力';
+  }
 }
 
 async function deleteBookmark(id) {
@@ -1033,6 +1241,8 @@ if ('serviceWorker' in navigator) {
 // ========== 起動 ==========
 startSync();
 initSections();
+document.getElementById('hamburger-btn').addEventListener('click', openSidebar);
+document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
 </script>
 </body>
 </html>
