@@ -1,5 +1,5 @@
-const API_KEY = 'AIzaSyBGcuc2uwBpFWGs31Duj4jIZRdA3Nxg_2Y';
-const DOC_URL = `https://firestore.googleapis.com/v1/projects/my-raindrop/databases/(default)/documents/myraindrop/data?key=${API_KEY}`;
+const FIREBASE_KEY = 'AIzaSyBGcuc2uwBpFWGs31Duj4jIZRdA3Nxg_2Y';
+const DOC_URL = `https://firestore.googleapis.com/v1/projects/my-raindrop/databases/(default)/documents/myraindrop/data?key=${FIREBASE_KEY}`;
 
 // ===== Firestore REST API ↔ JS 変換 =====
 function fromFS(val) {
@@ -45,6 +45,7 @@ function faviconUrl(url) {
 let collections = [];
 let bookmarks = [];
 let selectedTags = [];
+let pendingSummary = '';
 
 // ===== Firestore 読み込み =====
 async function loadData() {
@@ -56,11 +57,12 @@ async function loadData() {
 }
 
 // ===== コレクション =====
-function buildCollectionSelect() {
-  document.getElementById('f-col').innerHTML =
+function buildCollectionSelect(selectedId) {
+  const sel = document.getElementById('f-col');
+  sel.innerHTML =
     '<option value="">未分類</option>' +
     collections.filter(c => c.id !== 'all').map(c =>
-      `<option value="${esc(c.id)}">${esc((c.icon||'') + ' ' + c.name)}</option>`
+      `<option value="${esc(c.id)}"${c.id === selectedId ? ' selected' : ''}>${esc((c.icon||'') + ' ' + c.name)}</option>`
     ).join('');
 }
 
@@ -80,6 +82,11 @@ function addTag(tag) {
 
 function removeTag(i) {
   selectedTags.splice(i, 1);
+  renderTagChips();
+}
+
+function setTags(tags) {
+  selectedTags = [...tags];
   renderTagChips();
 }
 
@@ -124,6 +131,119 @@ function hideDropdown() {
   document.getElementById('tag-dropdown').style.display = 'none';
 }
 
+// ===== AI 自動入力 =====
+async function aiFill() {
+  const { geminiKey } = await chrome.storage.local.get('geminiKey');
+  if (!geminiKey) {
+    // 設定パネルを開いて知らせる
+    document.getElementById('settings-box').style.display = 'block';
+    document.getElementById('gemini-key-input').focus();
+    document.getElementById('status').textContent = '⚙️ まずGemini APIキーを設定してください';
+    document.getElementById('status').className = 'status err';
+    return;
+  }
+
+  const url   = document.getElementById('f-url').value.trim();
+  const title = document.getElementById('f-title').value.trim();
+  if (!url) return;
+
+  const btn = document.getElementById('btn-ai-fill');
+  btn.disabled = true;
+  btn.textContent = '✨ 解析中...';
+  document.getElementById('status').textContent = '';
+  document.getElementById('status').className = 'status';
+
+  try {
+    // 現在のタブからページ本文を直接取得（corsproxy不要）
+    let pageText = '';
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          const clone = document.cloneNode(true);
+          clone.querySelectorAll('script,style,nav,footer,header,aside').forEach(el => el.remove());
+          return (clone.body?.innerText || '').replace(/\s+/g, ' ').slice(0, 3000);
+        }
+      });
+      pageText = results?.[0]?.result || '';
+    } catch(e) {}
+
+    const existingCollections = collections.filter(c => c.id !== 'all').map(c => c.name).join(', ');
+    const existingTags = [...new Set(bookmarks.flatMap(b => b.tags || []))].slice(0, 40).join(', ');
+
+    const prompt = `以下のWebページについて、ブックマーク管理アプリ用にJSON形式で回答してください。
+
+URL: ${url}
+タイトル: ${title || '（未取得）'}
+本文抜粋: ${pageText || '（取得できませんでした）'}
+
+既存のコレクション: ${existingCollections}
+既存のタグ: ${existingTags}
+
+以下のJSON形式のみで回答（他の文字は一切含めない）:
+{
+  "collection": "最も適切なコレクション名（既存から選ぶか、新規名を提案）",
+  "tags": ["タグ1", "タグ2", "タグ3"],
+  "summary": "このページの内容を日本語で2〜3文で要約"
+}
+
+注意:
+- collectionは既存のコレクションから最適なものを選ぶ。どれも合わない場合は新しい名前を提案
+- tagsは既存タグを優先しつつ、内容に合ったものを3〜5個
+- summaryは日本語で簡潔に`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
+    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('レスポンスの解析に失敗しました');
+    const result = JSON.parse(match[0]);
+
+    // コレクション選択を更新
+    if (result.collection) {
+      const sel = document.getElementById('f-col');
+      const existingOpt = [...sel.options].find(o => o.value === result.collection || o.text.includes(result.collection));
+      if (existingOpt) {
+        sel.value = existingOpt.value;
+      } else {
+        const opt = document.createElement('option');
+        opt.value = result.collection;
+        opt.text = `${result.collection}（新規）`;
+        opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
+
+    // タグをセット
+    if (Array.isArray(result.tags)) setTags(result.tags);
+
+    // 要約を表示・保存
+    if (result.summary) {
+      pendingSummary = result.summary;
+      document.getElementById('ai-summary-text').textContent = result.summary;
+      document.getElementById('field-summary').style.display = 'block';
+    }
+
+  } catch(e) {
+    document.getElementById('status').textContent = `AI失敗: ${e.message}`;
+    document.getElementById('status').className = 'status err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ AIでタグ・コレクション・要約を自動入力';
+  }
+}
+
 // ===== 保存 =====
 async function save() {
   const url   = document.getElementById('f-url').value.trim();
@@ -137,7 +257,9 @@ async function save() {
   btn.disabled = true; btn.textContent = '保存中...';
 
   try {
-    bookmarks.push({ id: Date.now(), url, title, collection: col, tags: [...selectedTags], thumb: faviconUrl(url) });
+    const bookmark = { id: Date.now(), url, title, collection: col, tags: [...selectedTags], thumb: faviconUrl(url) };
+    if (pendingSummary) bookmark.summary = pendingSummary;
+    bookmarks.push(bookmark);
     const res = await fetch(DOC_URL, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -164,7 +286,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   st.textContent = '読み込み中...';
   try {
     await loadData();
-    buildCollectionSelect();
+    buildCollectionSelect('');
     const exists = bookmarks.some(b => b.url === tab.url);
     document.getElementById('already-msg').style.display = exists ? 'block' : 'none';
     st.textContent = '';
@@ -172,12 +294,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     st.textContent = 'データ読み込み失敗'; st.className = 'status err';
   }
 
+  // 設定パネルの開閉
+  document.getElementById('settings-toggle').addEventListener('click', () => {
+    const box = document.getElementById('settings-box');
+    const open = box.style.display === 'block';
+    box.style.display = open ? 'none' : 'block';
+    if (!open) {
+      chrome.storage.local.get('geminiKey', ({ geminiKey }) => {
+        document.getElementById('gemini-key-input').value = geminiKey || '';
+      });
+    }
+  });
+
+  document.getElementById('save-key-btn').addEventListener('click', () => {
+    const key = document.getElementById('gemini-key-input').value.trim();
+    chrome.storage.local.set({ geminiKey: key }, () => {
+      document.getElementById('settings-box').style.display = 'none';
+      document.getElementById('status').textContent = key ? '✓ APIキーを保存しました' : 'APIキーを削除しました';
+      document.getElementById('status').className = 'status ok';
+      setTimeout(() => { document.getElementById('status').textContent = ''; document.getElementById('status').className = 'status'; }, 2000);
+    });
+  });
+
+  // AI ボタン
+  document.getElementById('btn-ai-fill').addEventListener('click', aiFill);
+
   // タグ入力ラップ → フォーカス
   document.getElementById('tag-input-wrap').addEventListener('click', () => {
     document.getElementById('tag-text-input').focus();
   });
 
-  // タグテキスト入力
   const tagInput = document.getElementById('tag-text-input');
   tagInput.addEventListener('focus', () => renderDropdown(tagInput.value));
   tagInput.addEventListener('input', () => renderDropdown(tagInput.value));
@@ -192,19 +338,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // チップ削除（イベント委譲）
   document.getElementById('tag-chips').addEventListener('mousedown', e => {
     const btn = e.target.closest('.tag-chip-remove');
     if (btn) { e.preventDefault(); removeTag(Number(btn.dataset.index)); }
   });
 
-  // ドロップダウン選択（イベント委譲）
   document.getElementById('tag-dropdown').addEventListener('mousedown', e => {
     const item = e.target.closest('.tag-dropdown-item');
     if (item) { e.preventDefault(); addTag(item.dataset.tag); }
   });
 
-  // ボタン
   document.getElementById('btn-save').addEventListener('click', save);
   document.getElementById('btn-cancel').addEventListener('click', () => window.close());
   document.addEventListener('keydown', e => {
