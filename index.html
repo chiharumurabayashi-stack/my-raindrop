@@ -647,8 +647,8 @@ function renderCards() {
       </div>
       <div class="card-thumb">${b.thumb && b.thumb.startsWith('http')
         ? b.thumb.includes('google.com/s2/favicons')
-          ? `<img src="${b.thumb}" alt="" style="width:48px;height:48px;object-fit:contain" onerror="this.parentNode.innerHTML='🌐'">`
-          : `<img src="${b.thumb}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='🌐'">`
+          ? `<img src="${b.thumb}" alt="" style="width:48px;height:48px;object-fit:contain" onerror="retryThumb(${b.id},this)">`
+          : `<img src="${b.thumb}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="retryThumb(${b.id},this)">`
         : `<span style="font-size:32px">${b.thumb || '🌐'}</span>`
       }</div>
       <div class="card-body">
@@ -709,6 +709,29 @@ async function fetchPageMeta(url) {
   }
 
   return { title, ogImg };
+}
+
+const _retryingIds = new Set();
+async function retryThumb(id, imgEl) {
+  if (_retryingIds.has(id)) { imgEl.parentNode.innerHTML = '🌐'; return; }
+  _retryingIds.add(id);
+  imgEl.parentNode.innerHTML = '<span style="font-size:20px;opacity:0.4">⏳</span>';
+  const b = state.bookmarks.find(x => x.id === id);
+  if (!b) return;
+  try {
+    const { ogImg } = await fetchPageMeta(b.url);
+    if (ogImg) {
+      b.thumb = ogImg;
+      imgEl.parentNode.innerHTML = `<img src="${ogImg}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='🌐'">`;
+    } else {
+      const fav = faviconUrl(b.url);
+      b.thumb = fav;
+      imgEl.parentNode.innerHTML = `<img src="${fav}" alt="" style="width:48px;height:48px;object-fit:contain" onerror="this.parentNode.innerHTML='🌐'">`;
+    }
+    saveToFirestore();
+  } catch(e) {
+    imgEl.parentNode.innerHTML = '🌐';
+  }
 }
 
 async function fetchMissingThumbs() {
