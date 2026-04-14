@@ -664,9 +664,10 @@ function renderCards() {
 
   // ホーム画面: クイックアクセス + 最近使った
   if (state.activeCollection === '__home__' && !state.activeTag && !q) {
+    const QUICK_ACCESS_MIN_USES = 3;
     const pinned = state.bookmarks.filter(b => b.pinned);
     const byCount = state.bookmarks
-      .filter(b => !b.pinned && (b.useCount || 0) > 0)
+      .filter(b => !b.pinned && (b.useCount || 0) >= QUICK_ACCESS_MIN_USES)
       .sort((a, b) => (b.useCount || 0) - (a.useCount || 0) || (b.lastUsedAt || 0) - (a.lastUsedAt || 0));
     const quickAccess = [...pinned, ...byCount].slice(0, 12);
 
