@@ -709,17 +709,17 @@ function renderCards() {
   grid.outerHTML = `<div class="grid" id="card-grid">${items.map(cardHTML).join('')}</div>`;
 }
 
-let _openRecordTimer = null;
 function recordOpen(id) {
   const b = state.bookmarks.find(x => x.id === id);
   if (!b) return;
   b.useCount = (b.useCount || 0) + 1;
   b.lastUsedAt = Date.now();
+  // ローカルキャッシュに即保存（ページ更新で失わないように）
+  saveCache();
   // ホーム画面を即座に反映
   if (state.activeCollection === '__home__') renderCards();
-  // 5秒デバウンスしてFirestore保存（連打時の負荷軽減）
-  clearTimeout(_openRecordTimer);
-  _openRecordTimer = setTimeout(() => saveToFirestore(), 5000);
+  // Firestoreにも即保存
+  saveToFirestore();
 }
 
 async function togglePin(id) {
