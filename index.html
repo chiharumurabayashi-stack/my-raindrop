@@ -76,6 +76,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .card-action-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
 .card-action-btn:hover{background:#f0f0ee}
 .card-action-btn.danger:hover{background:#fff0f0}
+.card-action-btn.pinned{background:#fff6d8;border-color:#e8c547}
+.card-action-btn.pinned:hover{background:#fff0bf}
+.home-section{margin-bottom:28px}
+.home-section-title{font-size:12px;font-weight:500;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.06em}
+.home-section-title .count{font-size:11px;color:#bbb;font-weight:normal}
 .card-thumb{height:110px;background:#f5f5f3;display:flex;align-items:center;justify-content:center;font-size:32px}
 .card-body{padding:10px}
 .card-title{font-size:13px;font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -346,7 +351,7 @@ let state = {
     { id: 'Design', name: 'Design', icon: '🎨' },
     { id: '読み物', name: '読み物', icon: '📰' },
   ],
-  activeCollection: 'all',
+  activeCollection: '__home__',
   activeTag: null,
   editingId: null,
 };
@@ -375,7 +380,7 @@ function loadCache() {
       if (d.collections) state.collections = d.collections;
     }
   } catch(e) {}
-  state.activeCollection = localStorage.getItem('active_collection') || 'all';
+  state.activeCollection = localStorage.getItem('active_collection') || '__home__';
   state.activeTag = localStorage.getItem('active_tag') || null;
 }
 
@@ -471,12 +476,14 @@ function importJSON(event) {
 function renderSidebar() {
   const list = document.getElementById('collection-list');
   const unclassifiedCnt = state.bookmarks.filter(b => !b.collection).length;
+  const home = [{id: '__home__', name: 'ホーム', icon: '🏠', _virtual: true}];
   const unclassified = unclassifiedCnt > 0 ? [{id: '__unclassified__', name: '未分類', icon: '📂', _virtual: true}] : [];
-  list.innerHTML = [...state.collections, ...unclassified].map(c => {
+  list.innerHTML = [...home, ...state.collections, ...unclassified].map(c => {
     const cnt = c.id === 'all' ? state.bookmarks.length
       : c.id === '__unclassified__' ? unclassifiedCnt
+      : c.id === '__home__' ? ''
       : state.bookmarks.filter(b => b.collection === c.id).length;
-    const isDraggable = c.id !== 'all' && c.id !== '__unclassified__';
+    const isDraggable = c.id !== 'all' && c.id !== '__unclassified__' && c.id !== '__home__';
     const actions = isDraggable ? `
       <span class="col-actions">
         <button class="col-btn" onclick="event.stopPropagation();openEditCollection('${c.id}')" title="編集">✏️</button>
@@ -622,26 +629,15 @@ function setTag(t) {
   if (window.innerWidth <= 600) closeSidebar();
 }
 
-function renderCards() {
-  const q = (document.getElementById('search-input').value || '').toLowerCase();
-  let items = state.bookmarks;
-  if (state.activeCollection === '__unclassified__') items = items.filter(b => !b.collection);
-  else if (state.activeCollection !== 'all') items = items.filter(b => b.collection === state.activeCollection);
-  if (state.activeTag) items = items.filter(b => (b.tags || []).includes(state.activeTag));
-  if (q) items = items.filter(b => (b.title + b.url + (b.tags || []).join(' ')).toLowerCase().includes(q));
-
-  const grid = document.getElementById('card-grid');
-  if (!items.length) {
-    grid.innerHTML = `<div class="empty"><div class="emoji">🔖</div><p>ブックマークがありません</p><p style="margin-top:6px;font-size:12px">「+ 追加」からURLを保存しましょう</p></div>`;
-    return;
-  }
-  grid.innerHTML = items.map(b => `
+function cardHTML(b) {
+  return `
     <div class="card" draggable="true"
       ondragstart="dragStart(event, ${b.id})"
       ondragover="cardDragOver(event, ${b.id})"
       ondragleave="this.classList.remove('card-drag-over')"
       ondrop="cardDrop(event, ${b.id})">
       <div class="card-actions">
+        <button class="card-action-btn${b.pinned ? ' pinned' : ''}" onclick="togglePin(${b.id})" title="${b.pinned ? 'ピン留めを解除' : 'ピン留め'}">📌</button>
         <button class="card-action-btn" onclick="openEdit(${b.id})" title="編集">✏️</button>
         <button class="card-action-btn danger" onclick="deleteBookmark(${b.id})" title="削除">🗑</button>
       </div>
@@ -655,11 +651,82 @@ function renderCards() {
         <div class="card-title" title="${b.title}">${b.title}</div>
         <div class="card-url">${b.url.replace(/^https?:\/\//, '').split('/')[0]}</div>
         <div class="tags">${(b.tags || []).map(t => `<span class="tag" onclick="setTag('${t}')">${t}</span>`).join('')}</div>
-        <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener">開く ↗</a>
+        <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener" onclick="recordOpen(${b.id})">開く ↗</a>
       </div>
       ${b.summary ? `<div class="card-summary">${b.summary}</div>` : ''}
     </div>
-  `).join('');
+  `;
+}
+
+function renderCards() {
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  const grid = document.getElementById('card-grid');
+
+  // ホーム画面: クイックアクセス + 最近使った
+  if (state.activeCollection === '__home__' && !state.activeTag && !q) {
+    const pinned = state.bookmarks.filter(b => b.pinned);
+    const byCount = state.bookmarks
+      .filter(b => !b.pinned && (b.useCount || 0) > 0)
+      .sort((a, b) => (b.useCount || 0) - (a.useCount || 0) || (b.lastUsedAt || 0) - (a.lastUsedAt || 0));
+    const quickAccess = [...pinned, ...byCount].slice(0, 12);
+
+    const recent = state.bookmarks
+      .filter(b => b.lastUsedAt)
+      .sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0))
+      .slice(0, 12);
+
+    let html = '';
+    if (quickAccess.length) {
+      html += `<div class="home-section">
+        <div class="home-section-title">📌 クイックアクセス <span class="count">${quickAccess.length}</span></div>
+        <div class="grid">${quickAccess.map(cardHTML).join('')}</div>
+      </div>`;
+    }
+    if (recent.length) {
+      html += `<div class="home-section">
+        <div class="home-section-title">🕒 最近使った項目 <span class="count">${recent.length}</span></div>
+        <div class="grid">${recent.map(cardHTML).join('')}</div>
+      </div>`;
+    }
+    if (!html) {
+      html = `<div class="empty"><div class="emoji">🏠</div><p>ホーム画面は空です</p><p style="margin-top:6px;font-size:12px">ブックマークを開いたり📌でピン留めするとここに表示されます</p></div>`;
+    }
+    grid.outerHTML = `<div id="card-grid">${html}</div>`;
+    return;
+  }
+
+  let items = state.bookmarks;
+  if (state.activeCollection === '__unclassified__') items = items.filter(b => !b.collection);
+  else if (state.activeCollection !== 'all' && state.activeCollection !== '__home__') items = items.filter(b => b.collection === state.activeCollection);
+  if (state.activeTag) items = items.filter(b => (b.tags || []).includes(state.activeTag));
+  if (q) items = items.filter(b => (b.title + b.url + (b.tags || []).join(' ')).toLowerCase().includes(q));
+
+  if (!items.length) {
+    grid.outerHTML = `<div class="grid" id="card-grid"><div class="empty"><div class="emoji">🔖</div><p>ブックマークがありません</p><p style="margin-top:6px;font-size:12px">「+ 追加」からURLを保存しましょう</p></div></div>`;
+    return;
+  }
+  grid.outerHTML = `<div class="grid" id="card-grid">${items.map(cardHTML).join('')}</div>`;
+}
+
+let _openRecordTimer = null;
+function recordOpen(id) {
+  const b = state.bookmarks.find(x => x.id === id);
+  if (!b) return;
+  b.useCount = (b.useCount || 0) + 1;
+  b.lastUsedAt = Date.now();
+  // ホーム画面を即座に反映
+  if (state.activeCollection === '__home__') renderCards();
+  // 5秒デバウンスしてFirestore保存（連打時の負荷軽減）
+  clearTimeout(_openRecordTimer);
+  _openRecordTimer = setTimeout(() => saveToFirestore(), 5000);
+}
+
+async function togglePin(id) {
+  const b = state.bookmarks.find(x => x.id === id);
+  if (!b) return;
+  b.pinned = !b.pinned;
+  renderCards();
+  await saveToFirestore();
 }
 
 // ========== モーダル操作 ==========
