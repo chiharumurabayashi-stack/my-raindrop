@@ -664,13 +664,21 @@ function renderCards() {
 
   // ホーム画面: クイックアクセス + 最近使った
   if (state.activeCollection === '__home__' && !state.activeTag && !q) {
-    const QUICK_ACCESS_MIN_USES = 3;
+    // スコア = useCount × 0.5^(経過日数 / 30)  … 30日半減
+    const QUICK_ACCESS_MIN_SCORE = 3;
+    const now = Date.now();
+    const DAY = 86400000;
+    const scoreOf = b => {
+      const uc = b.useCount || 0;
+      if (!uc) return 0;
+      const days = b.lastUsedAt ? (now - b.lastUsedAt) / DAY : 999;
+      return uc * Math.pow(0.5, days / 30);
+    };
     const pinned = state.bookmarks.filter(b => b.pinned);
-    // 使用回数のみで降順。タイブレークはしない（recencyでソートすると「最近使った」と被る）
-    const byCount = state.bookmarks
-      .filter(b => !b.pinned && (b.useCount || 0) >= QUICK_ACCESS_MIN_USES)
-      .sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
-    const quickAccess = [...pinned, ...byCount].slice(0, 12);
+    const byScore = state.bookmarks
+      .filter(b => !b.pinned && scoreOf(b) >= QUICK_ACCESS_MIN_SCORE)
+      .sort((a, b) => scoreOf(b) - scoreOf(a));
+    const quickAccess = [...pinned, ...byScore].slice(0, 12);
 
     // 「最近使った」はクイックアクセスに出ていないものだけ
     const qaIds = new Set(quickAccess.map(b => b.id));
