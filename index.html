@@ -752,11 +752,10 @@ function faviconUrl(url) {
   } catch(e) { return null; }
 }
 
-// ページのスクリーンショット URL を返す（thum.io、無料・サインアップ不要）
+// ページのスクリーンショット URL を返す（WordPress mshots、無料・認証不要で安定）
 function screenshotUrl(url) {
   try {
-    // 末尾のスラッシュ無し URL を渡す形式
-    return `https://image.thum.io/get/width/600/crop/450/noanimate/${url}`;
+    return `https://s0.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=600&h=450`;
   } catch(e) { return null; }
 }
 
