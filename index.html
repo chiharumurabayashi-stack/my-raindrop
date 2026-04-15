@@ -666,13 +666,16 @@ function renderCards() {
   if (state.activeCollection === '__home__' && !state.activeTag && !q) {
     const QUICK_ACCESS_MIN_USES = 3;
     const pinned = state.bookmarks.filter(b => b.pinned);
+    // 使用回数のみで降順。タイブレークはしない（recencyでソートすると「最近使った」と被る）
     const byCount = state.bookmarks
       .filter(b => !b.pinned && (b.useCount || 0) >= QUICK_ACCESS_MIN_USES)
-      .sort((a, b) => (b.useCount || 0) - (a.useCount || 0) || (b.lastUsedAt || 0) - (a.lastUsedAt || 0));
+      .sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
     const quickAccess = [...pinned, ...byCount].slice(0, 12);
 
+    // 「最近使った」はクイックアクセスに出ていないものだけ
+    const qaIds = new Set(quickAccess.map(b => b.id));
     const recent = state.bookmarks
-      .filter(b => b.lastUsedAt)
+      .filter(b => b.lastUsedAt && !qaIds.has(b.id))
       .sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0))
       .slice(0, 12);
 
