@@ -193,18 +193,28 @@ URL: ${url}
 - tagsは既存タグを優先しつつ、内容に合ったものを3〜5個
 - summaryは日本語で簡潔に`;
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    // メインモデルがレート制限なら軽量モデルにフォールバック
+    const models = ['gemini-2.0-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-8b'];
+    let json = null, lastErr = null;
+    for (const model of models) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        });
+        if (res.ok) { json = await res.json(); break; }
+        const err = await res.json().catch(() => ({}));
+        lastErr = err?.error?.message || `HTTP ${res.status}`;
+        // 429 (レート制限) の場合は次モデルを試す。それ以外は中断
+        if (res.status !== 429) throw new Error(lastErr);
+      } catch(e) {
+        lastErr = e.message;
+        if (!/429|quota|exhaust|rate/i.test(lastErr)) throw e;
+      }
     }
+    if (!json) throw new Error(`全モデルで上限到達: ${lastErr}\n\n数分待つか、明日まで待つと復活します。`);
 
-    const json = await res.json();
     const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('レスポンスの解析に失敗しました');
