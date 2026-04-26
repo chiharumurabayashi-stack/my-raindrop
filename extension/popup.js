@@ -41,11 +41,54 @@ function faviconUrl(url) {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=128`; }
   catch(e) { return ''; }
 }
+function screenshotUrl(url) {
+  try { return `https://s0.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=600&h=450`; }
+  catch(e) { return ''; }
+}
+
+// 現在のタブから og:image / twitter:image / 最大の<img> を抽出
+async function fetchCoverFromActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const sels = [
+          'meta[property="og:image:secure_url"]',
+          'meta[property="og:image:url"]',
+          'meta[property="og:image"]',
+          'meta[name="twitter:image:src"]',
+          'meta[name="twitter:image"]',
+          'meta[itemprop="image"]',
+          'link[rel="image_src"]',
+        ];
+        for (const sel of sels) {
+          const el = document.querySelector(sel);
+          const v = el?.getAttribute('content') || el?.getAttribute('href');
+          if (v) {
+            try { return new URL(v, document.baseURI).href; } catch(e) { return v; }
+          }
+        }
+        const imgs = [...document.querySelectorAll('img')]
+          .map(img => ({
+            src: img.currentSrc || img.src,
+            w: img.naturalWidth || parseInt(img.getAttribute('width') || '0', 10),
+            h: img.naturalHeight || parseInt(img.getAttribute('height') || '0', 10),
+          }))
+          .filter(i => i.src && !i.src.startsWith('data:') && !/sprite|icon|logo|pixel|tracking|favicon/i.test(i.src) && i.w >= 200 && i.h >= 100)
+          .sort((a, b) => (b.w * b.h) - (a.w * a.h));
+        return imgs[0]?.src || null;
+      }
+    });
+    return results?.[0]?.result || null;
+  } catch(e) { return null; }
+}
 
 let collections = [];
 let bookmarks = [];
 let selectedTags = [];
 let pendingSummary = '';
+let pendingCover = null;
 
 // ===== Firestore 読み込み =====
 async function loadData() {
@@ -267,7 +310,10 @@ async function save() {
   btn.disabled = true; btn.textContent = '保存中...';
 
   try {
-    const bookmark = { id: Date.now(), url, title, collection: col, tags: [...selectedTags], thumb: faviconUrl(url) };
+    // カバー画像取得が完了していなければ最後に同期取得を試みる
+    if (!pendingCover) pendingCover = await fetchCoverFromActiveTab();
+    const thumb = pendingCover || screenshotUrl(url) || faviconUrl(url);
+    const bookmark = { id: Date.now(), url, title, collection: col, tags: [...selectedTags], thumb };
     if (pendingSummary) bookmark.summary = pendingSummary;
     bookmarks.push(bookmark);
     const res = await fetch(DOC_URL, {
@@ -291,6 +337,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   document.getElementById('f-url').value   = tab.url   || '';
   document.getElementById('f-title').value = tab.title || '';
+
+  // カバー画像を先取り取得（バックグラウンド）
+  fetchCoverFromActiveTab().then(cover => { if (cover) pendingCover = cover; });
 
   const st = document.getElementById('status');
   st.textContent = '読み込み中...';
