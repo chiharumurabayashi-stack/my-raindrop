@@ -302,6 +302,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:#6366f1">Google AI Studio</a> で無料取得できます（1日1500リクエスト）
       </div>
     </div>
+    <div class="field" style="border-top:0.5px solid rgba(0,0,0,0.08);padding-top:14px">
+      <label>サムネイル</label>
+      <button class="btn btn-sm btn-block" onclick="refetchAllThumbs()" style="margin-top:4px">🔄 全サムネイルを再取得</button>
+      <div style="font-size:11px;color:#aaa;margin-top:4px">favicon表示になっているブックマークのカバー画像を取り直します</div>
+    </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-settings')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveSettings()">保存</button>
@@ -914,6 +919,52 @@ async function fetchMissingThumbs() {
     await new Promise(r => setTimeout(r, 200));
   }
   if (updated) await saveToFirestore();
+}
+
+// 既存の favicon-only サムネイルを高品質なものに再取得（手動トリガー）
+function isLowQualityThumb(t) {
+  if (!t || !t.startsWith('http')) return true;
+  return /google\.com\/s2\/favicons|duckduckgo\.com\/ip3|favicon|\/img\/avatar\/default|\.ico(\?|$)/i.test(t);
+}
+
+let _refetchRunning = false;
+async function refetchAllThumbs() {
+  if (_refetchRunning) { alert('すでに実行中です。'); return; }
+  const targets = state.bookmarks.filter(b => isLowQualityThumb(b.thumb));
+  if (!targets.length) { alert('再取得が必要なサムネイルはありません。'); return; }
+  if (!confirm(`${targets.length}件のサムネイルを再取得します。\n（数十秒〜数分かかります）`)) return;
+
+  _refetchRunning = true;
+  closeModal('modal-settings');
+  const startTime = Date.now();
+  let success = 0, fail = 0;
+
+  for (let i = 0; i < targets.length; i++) {
+    const b = targets[i];
+    setStatus(`サムネイル再取得中... ${i + 1}/${targets.length} (${success}成功 / ${fail}失敗)`, 'syncing');
+    try {
+      const { ogImg } = await fetchPageMeta(b.url);
+      if (ogImg) {
+        b.thumb = ogImg;
+        success++;
+      } else {
+        // og:image が無ければスクリーンショットURL
+        b.thumb = screenshotUrl(b.url) || faviconUrl(b.url) || '🌐';
+        success++;
+      }
+    } catch(e) {
+      b.thumb = screenshotUrl(b.url) || faviconUrl(b.url) || '🌐';
+      fail++;
+    }
+    renderCards();
+    // 300msのスロットリング
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  await saveToFirestore();
+  _refetchRunning = false;
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  setStatus(`✓ サムネイル再取得完了: ${success}成功 / ${fail}失敗 (${elapsed}秒)`, 'synced');
 }
 
 async function fetchTitle(url) {
