@@ -248,6 +248,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       <label>タイトル <span id="title-fetching" style="color:#aaa;font-weight:normal;display:none">取得中...</span></label>
       <input id="f-title" type="text" placeholder="サイト名">
     </div>
+    <div class="field" id="field-thumb">
+      <label>サムネイル <span id="thumb-fetching" style="color:#aaa;font-weight:normal;display:none">取得中...</span></label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div id="f-thumb-preview" style="width:80px;height:60px;border-radius:6px;background:#f5f5f3;border:0.5px solid rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;flex-shrink:0">🌐</div>
+        <button class="btn btn-sm" type="button" onclick="modalRefetchThumb()" id="btn-refetch-thumb">🔄 再取得</button>
+      </div>
+    </div>
     <div class="field" style="margin-bottom:8px">
       <button id="btn-ai-fill" class="btn btn-ai" onclick="aiFill()" style="width:100%">✨ AIでタグ・コレクション・要約を自動入力</button>
     </div>
@@ -1076,6 +1083,42 @@ function hideTagDropdown() {
   if (d) d.style.display = 'none';
 }
 
+function renderThumbPreview(thumb) {
+  const el = document.getElementById('f-thumb-preview');
+  if (!el) return;
+  if (thumb && thumb.startsWith('http')) {
+    const isFavicon = thumb.includes('google.com/s2/favicons');
+    el.innerHTML = `<img src="${thumb}" alt="" style="${isFavicon ? 'width:32px;height:32px;object-fit:contain' : 'width:100%;height:100%;object-fit:cover'}" onerror="this.parentNode.innerHTML='🌐'">`;
+  } else {
+    el.innerHTML = thumb || '🌐';
+  }
+}
+
+async function modalRefetchThumb() {
+  const url = document.getElementById('f-url').value.trim();
+  if (!url) { alert('URLを入力してください。'); return; }
+  const btn = document.getElementById('btn-refetch-thumb');
+  const indicator = document.getElementById('thumb-fetching');
+  btn.disabled = true;
+  indicator.style.display = 'inline';
+  try {
+    const { ogImg } = await fetchPageMeta(url);
+    const newThumb = ogImg || screenshotUrl(url) || faviconUrl(url) || '🌐';
+    pendingThumb = newThumb;
+    renderThumbPreview(newThumb);
+    // 編集モードなら即座に保存
+    if (state.editingId) {
+      const b = state.bookmarks.find(x => x.id === state.editingId);
+      if (b) { b.thumb = newThumb; renderCards(); saveToFirestore(); }
+    }
+  } catch(e) {
+    alert('サムネイル取得に失敗しました: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    indicator.style.display = 'none';
+  }
+}
+
 async function openAddModal() {
   state.editingId = null;
   document.getElementById('modal-title').textContent = 'ブックマークを追加';
@@ -1086,6 +1129,8 @@ async function openAddModal() {
   document.getElementById('field-summary').style.display = 'none';
   document.getElementById('btn-ai-fill').disabled = false;
   document.getElementById('btn-ai-fill').textContent = '✨ AIでタグ・コレクション・要約を自動入力';
+  pendingThumb = null;
+  renderThumbPreview(null);
   initTagInput([]);
   const sel = document.getElementById('f-col');
   const activeCol = state.activeCollection === 'all' ? '' : state.activeCollection;
@@ -1115,6 +1160,8 @@ function openEdit(id) {
   document.getElementById('f-title').value = b.title;
   document.getElementById('btn-ai-fill').disabled = false;
   document.getElementById('btn-ai-fill').textContent = '✨ AIでタグ・コレクション・要約を自動入力';
+  pendingThumb = b.thumb || null;
+  renderThumbPreview(b.thumb);
   if (b.summary) {
     document.getElementById('f-summary').textContent = b.summary;
     document.getElementById('field-summary').style.display = 'block';
@@ -1143,11 +1190,11 @@ async function saveBookmark() {
   if (!url) return;
   if (state.editingId) {
     const b = state.bookmarks.find(x => x.id === state.editingId);
-    if (b) Object.assign(b, { url, title, collection: col, tags, ...(summary && { summary }) });
+    if (b) Object.assign(b, { url, title, collection: col, tags, ...(pendingThumb && { thumb: pendingThumb }), ...(summary && { summary }) });
   } else {
     state.bookmarks.push({ id: Date.now(), url, title, collection: col, tags, thumb: pendingThumb || randEmoji(), ...(summary && { summary }) });
-    pendingThumb = null;
   }
+  pendingThumb = null;
   closeModal('modal-add');
   renderSidebar();
   renderCards();
