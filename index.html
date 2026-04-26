@@ -770,27 +770,81 @@ function screenshotUrl(url) {
   } catch(e) { return null; }
 }
 
+// HTMLから画像URL候補を順に試す（Linkwarden参考の多段抽出）
+function extractImageFromDoc(doc, baseUrl) {
+  const selectors = [
+    'meta[property="og:image:secure_url"]',
+    'meta[property="og:image:url"]',
+    'meta[property="og:image"]',
+    'meta[name="twitter:image:src"]',
+    'meta[name="twitter:image"]',
+    'meta[itemprop="image"]',
+    'link[rel="image_src"]',
+  ];
+  for (const sel of selectors) {
+    const el = doc.querySelector(sel);
+    const v = el?.getAttribute('content') || el?.getAttribute('href');
+    if (v) {
+      try { return new URL(v, baseUrl).href; } catch(e) { return v; }
+    }
+  }
+  // 最後の手段: ページ内で大きそうな img を探す
+  const imgs = [...doc.querySelectorAll('img')]
+    .map(img => ({
+      src: img.getAttribute('src') || img.getAttribute('data-src'),
+      w: parseInt(img.getAttribute('width') || '0', 10),
+      h: parseInt(img.getAttribute('height') || '0', 10),
+    }))
+    .filter(i => i.src && !i.src.startsWith('data:') && !/sprite|icon|logo|pixel|tracking/i.test(i.src))
+    .sort((a, b) => (b.w * b.h) - (a.w * a.h));
+  if (imgs[0]) {
+    try { return new URL(imgs[0].src, baseUrl).href; } catch(e) {}
+  }
+  return null;
+}
+
+// CORSプロキシ経由でHTMLを取得（複数プロキシをフォールバック）
+async function fetchHtmlViaProxy(url) {
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+  for (const makeUrl of proxies) {
+    try {
+      const res = await fetch(makeUrl(url), { signal: AbortSignal.timeout(7000) });
+      if (res.ok) {
+        const html = await res.text();
+        if (html && html.length > 200) return html;
+      }
+    } catch(e) {}
+  }
+  return null;
+}
+
 async function fetchPageMeta(url) {
   let title = null, ogImg = null;
 
-  // Step1: corsproxy.io で直接HTML取得
-  try {
-    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(6000) });
-    if (res.ok) {
-      const html = await res.text();
+  // Step1: 複数CORSプロキシでHTML取得 → 多段抽出
+  const html = await fetchHtmlViaProxy(url);
+  if (html) {
+    try {
       const doc = new DOMParser().parseFromString(html, 'text/html');
-      title = doc.querySelector('title')?.textContent?.trim() || null;
-      ogImg = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || null;
-    }
-  } catch(e) {}
+      title = doc.querySelector('title')?.textContent?.trim()
+           || doc.querySelector('meta[property="og:title"]')?.getAttribute('content')
+           || doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content')
+           || null;
+      ogImg = extractImageFromDoc(doc, url);
+    } catch(e) {}
+  }
 
-  // Step2: タイトルまたは画像が取れなければ microlink.io で補完
+  // Step2: 取れなかった項目は microlink.io で補完
   if (!title || !ogImg) {
     try {
       const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
       const json = await res.json();
       if (!title) title = json?.data?.title || null;
-      if (!ogImg) ogImg = json?.data?.image?.url || json?.data?.screenshot?.url || null;
+      if (!ogImg) ogImg = json?.data?.image?.url || json?.data?.logo?.url || null;
     } catch(e) {}
   }
 
