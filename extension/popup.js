@@ -106,7 +106,21 @@ function buildCollectionSelect(selectedId) {
     '<option value="">未分類</option>' +
     collections.filter(c => c.id !== 'all').map(c =>
       `<option value="${esc(c.id)}"${c.id === selectedId ? ' selected' : ''}>${esc((c.icon||'') + ' ' + c.name)}</option>`
-    ).join('');
+    ).join('') +
+    '<option value="__new__">➕ 新しいコレクションを追加...</option>';
+}
+
+// 名前からコレクションを取得、なければ作成してidを返す
+function ensureCollection(rawName) {
+  // 先頭の絵文字をiconとして分離（例: "📚 読みたい本"）
+  const m = rawName.match(/^(\p{Extended_Pictographic}️?)\s*(.+)$/u);
+  const icon = m ? m[1] : '';
+  const name = (m ? m[2] : rawName).trim();
+  if (!name) return '';
+  const existing = collections.find(c => c.id === name || c.name === name);
+  if (existing) return existing.id;
+  collections.push({ id: name, name, icon });
+  return name;
 }
 
 // ===== タグ chip =====
@@ -273,8 +287,8 @@ URL: ${url}
         const opt = document.createElement('option');
         opt.value = result.collection;
         opt.text = `${result.collection}（新規）`;
+        sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
         opt.selected = true;
-        sel.appendChild(opt);
       }
     }
 
@@ -301,10 +315,25 @@ URL: ${url}
 async function save() {
   const url   = document.getElementById('f-url').value.trim();
   const title = document.getElementById('f-title').value.trim() || url;
-  const col   = document.getElementById('f-col').value;
+  let   col   = document.getElementById('f-col').value;
   const inputVal = document.getElementById('tag-text-input').value.trim();
   if (inputVal && !selectedTags.includes(inputVal)) selectedTags.push(inputVal);
   if (!url) return;
+
+  // 新規コレクションの解決
+  if (col === '__new__') {
+    const name = document.getElementById('new-col-input').value.trim();
+    if (!name) {
+      const st = document.getElementById('status');
+      st.textContent = '新しいコレクション名を入力してください'; st.className = 'status err';
+      document.getElementById('new-col-input').focus();
+      return;
+    }
+    col = ensureCollection(name);
+  } else if (col && !collections.some(c => c.id === col)) {
+    // AIが提案した未作成コレクション → 作成してから保存
+    col = ensureCollection(col);
+  }
 
   const btn = document.getElementById('btn-save');
   btn.disabled = true; btn.textContent = '保存中...';
@@ -377,6 +406,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // AI ボタン
   document.getElementById('btn-ai-fill').addEventListener('click', aiFill);
+
+  // コレクション選択 → 「新しいコレクション」で入力欄を表示
+  document.getElementById('f-col').addEventListener('change', e => {
+    const input = document.getElementById('new-col-input');
+    const isNew = e.target.value === '__new__';
+    input.style.display = isNew ? 'block' : 'none';
+    if (isNew) input.focus();
+  });
 
   // タグ入力ラップ → フォーカス
   document.getElementById('tag-input-wrap').addEventListener('click', () => {
