@@ -42,6 +42,13 @@ button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2p
 .layout-list .card:hover,.layout-headlines .card:hover{background:#fafaf9}
 .layout-list .card-thumb{height:76px;width:104px;border-radius:6px;overflow:hidden}
 .layout-list .card-body,.layout-headlines .card-body{padding:0}
+.card-details{min-width:0}
+.grid.layout-list{container-type:inline-size}
+.layout-list .card-summary{display:block;-webkit-line-clamp:unset;overflow:visible;overflow-wrap:anywhere;white-space:pre-line;font-size:12px;line-height:1.7;color:#666}
+@container (min-width:760px){
+ .layout-list .card-body:has(.card-summary){display:grid;grid-template-columns:minmax(180px,min(36%,340px)) minmax(0,1fr);column-gap:24px;align-items:start}
+ .layout-list .card-body .card-summary{padding:0}
+}
 .layout-list .card-title{font-size:14px;margin:2px 0 7px}
 .layout-list .card-actions,.layout-headlines .card-actions{top:16px;right:10px}
 .layout-list .card-drag-handle,.layout-headlines .card-drag-handle{left:4px;top:16px;border:0;background:transparent}

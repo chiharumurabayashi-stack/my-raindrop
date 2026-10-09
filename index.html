@@ -171,7 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   .grid{grid-template-columns:1fr 1fr}
 }
 </style>
-<link rel="stylesheet" href="browse.css?v=20261009-browse">
+<link rel="stylesheet" href="browse.css?v=20261009-list-description">
 </head>
 <body>
 
@@ -755,9 +755,11 @@ function cardHTML(b, view = BookmarkLibrary.defaults()) {
     </div>
     ${options.cover ? `<a class="card-thumb" ${link}>${image}</a>` : ''}
     <div class="card-body">
+      <div class="card-details">
       ${options.title ? `<div class="card-title" title="${title}"><a ${link}>${title}</a></div>` : ''}
       ${options.url ? `<div class="card-url">${uiEscape(String(b.url || '').replace(/^https?:\/\//, '').split('/')[0])}</div>` : ''}
       ${options.tags ? `<div class="tags">${(b.tags || []).map(t => `<button class="tag" data-filter-tag="${uiEscape(t)}">${uiEscape(t)}</button>`).join('')}</div>` : ''}
+      </div>
       ${options.description && b.summary ? `<div class="card-summary">${uiEscape(b.summary)}</div>` : ''}
     </div>
   </div>`;
