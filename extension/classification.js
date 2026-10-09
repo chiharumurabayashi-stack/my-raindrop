@@ -45,6 +45,27 @@ AI: AIチャット・生成サービス・AIのAPI管理。クリエイティブ
     }
     return [...counts.keys()].sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b, 'ja'));
   }
+  const titleRules = `名前は短く、あとで見分けられる形に整理する。
+サービスの入口はサービス名を中心に、宣伝文句・重複したサイト名・通知件数・不要な「公式サイト」を除く。
+個別の機能・設定・ログイン画面は「サービス名：用途」とし、同じサイト内の別ページを区別する。
+記事・動画・資料は主題、固有名詞、版・年・番号など識別に必要な情報を残す。サイト名だけに置き換えない。
+日本語の説明部分は20〜40文字程度を目安にするが、文字数だけで途中を切らない。固有名詞は原表記を尊重する。
+Home・Index of /・ログインなどだけではなく、URLと元の名前から確実に分かるサイト名・用途を補う。
+URLや本文にない情報は推測で付け足さない。既に短く明確なら変えない。判断できない場合はtitleを空文字にする。`;
+  function cleanSuggestedTitle(value) {
+    if (typeof value !== 'string') return '';
+    const title = value.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
+    // Reject unusable suggestions rather than cutting off identifying words.
+    if (!title || Array.from(title).length > 120 || /^(?:https?:\/\/|<)|^(?:home|index of\s*\/|ログイン|untitled|無題|null|undefined)$/i.test(title)) return '';
+    return title;
+  }
+  function applySuggestedTitle(input, value, originalTitle) {
+    const title = cleanSuggestedTitle(value);
+    // Do not overwrite text the user has edited while the request was running.
+    if (!title || input.value.trim() !== originalTitle.trim()) return false;
+    input.value = title;
+    return true;
+  }
   function buildPrompt({ url, title, pageText, collections, bookmarks }) {
     const available = collections.filter(c => !['all', '__home__', '__unclassified__'].includes(c.id));
     return `ブックマークを整理するためJSONだけで回答してください。
@@ -53,8 +74,9 @@ AI: AIチャット・生成サービス・AIのAPI管理。クリエイティブ
 既存コレクション: ${JSON.stringify(available.map(c => ({ id: c.id, name: c.name })))}
 既存タグ（全種類、使用頻度順）: ${JSON.stringify(vocabulary(bookmarks))}
 分類ルール: ${rules}
+名前の整理ルール: ${titleRules}
 回答形式:
-{"collection":"既存のコレクションID、判断できなければ空文字","tags":[],"proposedCollection":"新しい分類が必要な場合のみ候補名、通常は空文字","proposedTags":[],"summary":"日本語で2〜3文の要約"}
+{"title":"整理した名前、判断できなければ空文字","collection":"既存のコレクションID、判断できなければ空文字","tags":[],"proposedCollection":"新しい分類が必要な場合のみ候補名、通常は空文字","proposedTags":[],"summary":"日本語で2〜3文の要約"}
 collectionは必ず既存から選ぶ。tagsは既存の表記どおり0〜3個とし、重複させない。
 必要な既存タグがなければtagsは空でよい。新しいタグはproposedTagsに最大3個だけ提案する。
 新しいコレクションはproposedCollectionにのみ提案し、collectionには入れない。
@@ -69,6 +91,7 @@ collectionは必ず既存から選ぶ。tagsは既存の表記どおり0〜3個�
     const proposedCollection = !collection && typeof data.collection === 'string' && data.collection.trim()
       ? data.collection.trim() : typeof data.proposedCollection === 'string' ? data.proposedCollection.trim() : '';
     return {
+      title: cleanSuggestedTitle(data.title),
       collectionId: collection ? collection.id : null,
       tags: tags.filter(t => known.has(t)).slice(0, 3),
       proposedTags: normalizeTags([...tags.filter(t => !known.has(t)), ...(Array.isArray(data.proposedTags) ? data.proposedTags : [])])
@@ -85,7 +108,7 @@ collectionは必ず既存から選ぶ。tagsは既存の表記どおり0〜3個�
     element.textContent = parts.length ? '新しい候補（未適用） — ' + parts.join(' ／ ') + '。必要なものだけ手動で追加してください。' : '';
     element.hidden = !parts.length;
   }
-  const api = { normalizeTag, normalizeTags, vocabulary, buildPrompt, sanitizeResult, showSuggestions, resolveCollectionId };
+  const api = { normalizeTag, normalizeTags, vocabulary, buildPrompt, sanitizeResult, showSuggestions, resolveCollectionId, cleanSuggestedTitle, applySuggestedTitle };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.BookmarkClassification = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

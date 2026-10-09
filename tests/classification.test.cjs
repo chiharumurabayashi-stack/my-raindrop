@@ -7,6 +7,28 @@ const taxonomy = require('../extension/classification.js');
 const collections = [{id:'all',name:'すべて'},{id:'AI',name:'AI'},{id:'daily',name:'仕事・日常ツール'}];
 const bookmarks = [{tags:['AI','チャット','ニュース','RSS','Google']},{tags:['ニュース','メール']}];
 
+test('AI title cleanup rejects unusable output and retains identifying version numbers', () => {
+  for(const title of [null,{},[], '', 'Home', 'Index of /', 'ログイン', 'https://example.com', '<img src=x>', '長'.repeat(121)]) {
+    assert.equal(taxonomy.sanitizeResult({title},collections,bookmarks).title,'');
+  }
+  assert.equal(taxonomy.cleanSuggestedTitle('  Blender 4.3：\n ノード入門  '),'Blender 4.3： ノード入門');
+  const prompt=taxonomy.buildPrompt({url:'https://example.com/article',title:'A long article',pageText:'',collections,bookmarks});
+  assert(prompt.includes('記事・動画・資料'));
+  assert(prompt.includes('文字数だけで途中を切らない'));
+  assert(prompt.includes('"title"'));
+});
+
+test('AI titles never erase an existing name or overwrite edits made while waiting', () => {
+  const input={value:'Original title'};
+  assert.equal(taxonomy.applySuggestedTitle(input,'','Original title'),false);
+  assert.equal(input.value,'Original title');
+  input.value='My custom name';
+  assert.equal(taxonomy.applySuggestedTitle(input,'AI name','Original title'),false);
+  assert.equal(input.value,'My custom name');
+  assert.equal(taxonomy.applySuggestedTitle(input,'Clean name','My custom name'),true);
+  assert.equal(input.value,'Clean name');
+});
+
 test('normalizes aliases, whitespace, full-width Latin text, and duplicates', () => {
   assert.deepEqual(taxonomy.normalizeTags(['news',' ニュース ','ｄｅｓｉｇｎ','ROM','rom','dev',null,{},'', 'Blender']),
     ['ニュース','デザイン','ROM','開発','Blender']);
@@ -81,12 +103,13 @@ for (const target of ['web','extension']) {
       BookmarkClassification:taxonomy, state:{collections,bookmarks}, collections,bookmarks,
       document:{getElementById:element},localStorage:{getItem:()=> 'test-key'},
       chrome:{storage:{local:{get:async()=>({geminiKey:'test-key'})}},tabs:{query:async()=>[{id:1}]},scripting:{executeScript:async()=>[{result:'Test page'}]}},
-      fetch:async url=>url.includes('generateContent')?{ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({collection:'AI画像',tags:['news','新規タグ','tool'],summary:'要約'})}]}}]})}:{ok:false},
+      fetch:async url=>url.includes('generateContent')?{ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({title:'Example：資料',collection:'AI画像',tags:['news','新規タグ','tool'],summary:'要約'})}]}}]})}:{ok:false},
       AbortSignal,initTagInput:tags=>{appliedTags=tags;},setTags:tags=>{appliedTags=tags;},
       alert:message=>assert.fail(message),openSettings:()=>assert.fail('unexpected settings'),
     });
     vm.runInContext(code,ctx); await ctx.aiFill();
     assert.equal(element('f-col').value,'daily');
+    assert.equal(element('f-title').value,'Example：資料');
     assert.deepEqual(appliedTags,['ニュース']);
     assert.equal(element('ai-classification-suggestions').hidden,false);
     assert(element('ai-classification-suggestions').textContent.includes('新規タグ'));

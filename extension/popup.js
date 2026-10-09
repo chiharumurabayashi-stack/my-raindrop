@@ -256,6 +256,9 @@ async function aiFill() {
     if (!match) throw new Error('レスポンスの解析に失敗しました');
     const result = BookmarkClassification.sanitizeResult(JSON.parse(match[0]), collections, bookmarks);
 
+    if (document.getElementById('f-url').value.trim() !== url) return;
+    BookmarkClassification.applySuggestedTitle(document.getElementById('f-title'), result.title, title);
+
     // コレクション選択を更新
     if (result.collectionId !== null) {
       const sel = document.getElementById('f-col');
@@ -279,7 +282,7 @@ async function aiFill() {
     document.getElementById('status').className = 'status err';
   } finally {
     btn.disabled = false;
-    btn.textContent = '✨ AIでタグ・コレクション・要約を自動入力';
+    btn.textContent = '✨ AIで名前・分類・要約を整理';
   }
 }
 
