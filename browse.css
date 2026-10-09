@@ -37,7 +37,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2p
 .card-action-btn.pinned:hover{background:#d0e2fd}
 .card .tag{border:0;font-family:inherit}
 .grid.layout-list,.grid.layout-headlines{display:flex;flex-direction:column;gap:0;background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden}
-.layout-list .card,.layout-headlines .card{border:0;border-bottom:0.5px solid rgba(0,0,0,.08);border-radius:0;display:grid;grid-template-columns:104px minmax(0,1fr);padding:16px 112px 16px 36px;gap:16px;align-items:start;min-height:92px;background:transparent}
+.layout-list .card,.layout-headlines .card{border:0;border-bottom:0.5px solid rgba(0,0,0,.08);border-radius:0;display:grid;grid-template-columns:104px minmax(0,1fr);padding:16px 112px 16px 16px;gap:16px;align-items:start;min-height:92px;background:transparent}
 .layout-list .card:last-child,.layout-headlines .card:last-child{border-bottom:0}
 .layout-list .card:hover,.layout-headlines .card:hover{background:#fafaf9}
 .layout-list .card-thumb{height:76px;width:104px;border-radius:6px;overflow:hidden}
@@ -51,14 +51,13 @@ button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2p
 }
 .layout-list .card-title{font-size:14px;margin:2px 0 7px}
 .layout-list .card-actions,.layout-headlines .card-actions{top:16px;right:10px}
-.layout-list .card-drag-handle,.layout-headlines .card-drag-handle{left:4px;top:16px;border:0;background:transparent}
 .layout-list.cover-right .card{grid-template-columns:minmax(0,1fr) 104px}
 .layout-list.cover-right .card-thumb{grid-column:2;grid-row:1}
 .layout-list.cover-right .card-body{grid-column:1;grid-row:1}
 .layout-list.no-cover .card,.grid.layout-headlines .card{grid-template-columns:minmax(0,1fr)}
 .grid.layout-headlines .card{padding-top:13px;padding-bottom:13px;min-height:52px}
 .layout-headlines .card-title{margin:3px 0}
-.layout-headlines .card-actions,.layout-headlines .card-drag-handle{top:10px}
+.layout-headlines .card-actions{top:10px}
 .layout-card.no-cover .card-body,.layout-moodboard.no-cover .card-body{padding-top:42px}
 .grid.layout-moodboard{display:block;columns:240px;column-gap:12px}
 .layout-moodboard .card{break-inside:avoid;margin-bottom:12px;display:inline-block;width:100%;vertical-align:top}
@@ -85,11 +84,11 @@ button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2p
  .topbar{padding:10px;gap:6px}.topbar>.btn{padding:7px 10px}
  .browse-toolbar{padding:12px 10px}.content{padding:10px}.filter-chips{padding:10px 10px 0}
  .search-menu{position:fixed;left:10px;right:10px;top:62px;width:auto;max-height:60vh}
- .layout-list .card{grid-template-columns:64px minmax(0,1fr);padding:12px 12px 42px 32px;gap:10px}
+ .layout-list .card{grid-template-columns:64px minmax(0,1fr);padding:12px 12px 42px;gap:10px}
  .layout-list .card-thumb{width:64px;height:56px}
  .layout-list.cover-right .card{grid-template-columns:minmax(0,1fr) 64px}
  .layout-list .card-actions,.layout-headlines .card-actions{top:auto;bottom:7px;right:9px;opacity:1}
- .layout-headlines .card{padding:12px 12px 42px 32px!important}
+ .layout-headlines .card{padding:12px 12px 42px!important}
  .grid.layout-moodboard{columns:2;column-gap:10px}
  .view-menu{max-height:65vh}
 }

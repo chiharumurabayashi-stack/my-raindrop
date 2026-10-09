@@ -10,7 +10,7 @@ const seed = {
     collection: i === 11 ? '' : i % 3 === 0 ? 'Design' : 'Work', tags: i === 11 ? [] : i % 3 === 0 ? ['デザイン', '画像'] : i % 2 ? ['仕事', 'Google'] : ['仕事', '学習'], pinned: i < 8,
     lastUsedAt: Date.now() - i * 1000, useCount: i < 8 ? 5 : 1,
     thumb: 'http://127.0.0.1:4179/thumbnail.svg?i=' + i,
-    summary: '表示確認用のサンプルです。サムネイルからページを開き、つまみで順番を変更できます。',
+    summary: '表示確認用のサンプルです。サムネイルからページを開き、カードをドラッグして順番を変更できます。',
   })),
   collections: [{ id: 'all', name: 'すべて', icon: '📌' }, { id: 'Work', name: '作業用', icon: '📁' }, { id: 'Design', name: 'クリエイティブ', icon: '🎨' }],
 };
