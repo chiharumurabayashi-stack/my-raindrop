@@ -131,7 +131,7 @@ function renderTagChips() {
 }
 
 function addTag(tag) {
-  const t = tag.trim();
+  const t = BookmarkClassification.normalizeTag(tag);
   if (t && !selectedTags.includes(t)) { selectedTags.push(t); renderTagChips(); }
   document.getElementById('tag-text-input').value = '';
   renderDropdown('');
@@ -143,7 +143,7 @@ function removeTag(i) {
 }
 
 function setTags(tags) {
-  selectedTags = [...tags];
+  selectedTags = BookmarkClassification.normalizeTags(tags);
   renderTagChips();
 }
 
@@ -207,6 +207,7 @@ async function aiFill() {
   const btn = document.getElementById('btn-ai-fill');
   btn.disabled = true;
   btn.textContent = '✨ 解析中...';
+  BookmarkClassification.showSuggestions(document.getElementById('ai-classification-suggestions'), null);
   document.getElementById('status').textContent = '';
   document.getElementById('status').className = 'status';
 
@@ -226,29 +227,7 @@ async function aiFill() {
       pageText = results?.[0]?.result || '';
     } catch(e) {}
 
-    const existingCollections = collections.filter(c => c.id !== 'all').map(c => c.name).join(', ');
-    const existingTags = [...new Set(bookmarks.flatMap(b => b.tags || []))].slice(0, 40).join(', ');
-
-    const prompt = `以下のWebページについて、ブックマーク管理アプリ用にJSON形式で回答してください。
-
-URL: ${url}
-タイトル: ${title || '（未取得）'}
-本文抜粋: ${pageText || '（取得できませんでした）'}
-
-既存のコレクション: ${existingCollections}
-既存のタグ: ${existingTags}
-
-以下のJSON形式のみで回答（他の文字は一切含めない）:
-{
-  "collection": "最も適切なコレクション名（既存から選ぶか、新規名を提案）",
-  "tags": ["タグ1", "タグ2", "タグ3"],
-  "summary": "このページの内容を日本語で2〜3文で要約"
-}
-
-注意:
-- collectionは既存のコレクションから最適なものを選ぶ。どれも合わない場合は新しい名前を提案
-- tagsは既存タグを優先しつつ、内容に合ったものを3〜5個
-- summaryは日本語で簡潔に`;
+    const prompt = BookmarkClassification.buildPrompt({ url, title, pageText, collections, bookmarks });
 
     // メインモデルがレート制限なら軽量モデルにフォールバック
     const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'];
@@ -275,22 +254,15 @@ URL: ${url}
     const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('レスポンスの解析に失敗しました');
-    const result = JSON.parse(match[0]);
+    const result = BookmarkClassification.sanitizeResult(JSON.parse(match[0]), collections, bookmarks);
 
     // コレクション選択を更新
-    if (result.collection) {
+    if (result.collectionId !== null) {
       const sel = document.getElementById('f-col');
-      const existingOpt = [...sel.options].find(o => o.value === result.collection || o.text.includes(result.collection));
-      if (existingOpt) {
-        sel.value = existingOpt.value;
-      } else {
-        const opt = document.createElement('option');
-        opt.value = result.collection;
-        opt.text = `${result.collection}（新規）`;
-        sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
-        opt.selected = true;
-      }
+      sel.value = result.collectionId;
+      document.getElementById('new-col-input').style.display = 'none';
     }
+    BookmarkClassification.showSuggestions(document.getElementById('ai-classification-suggestions'), result);
 
     // タグをセット
     if (Array.isArray(result.tags)) setTags(result.tags);
@@ -331,7 +303,7 @@ async function save() {
     }
     col = ensureCollection(name);
   } else if (col && !collections.some(c => c.id === col)) {
-    // AIが提案した未作成コレクション → 作成してから保存
+    // ユーザーが明示的に選んだ未作成コレクションを解決
     col = ensureCollection(col);
   }
 
@@ -342,7 +314,7 @@ async function save() {
     // カバー画像取得が完了していなければ最後に同期取得を試みる
     if (!pendingCover) pendingCover = await fetchCoverFromActiveTab();
     const thumb = pendingCover || screenshotUrl(url) || faviconUrl(url);
-    const bookmark = { id: Date.now(), url, title, collection: col, tags: [...selectedTags], thumb };
+    const bookmark = { id: Date.now(), url, title, collection: col, tags: BookmarkClassification.normalizeTags(selectedTags), thumb };
     if (pendingSummary) bookmark.summary = pendingSummary;
     bookmarks.push(bookmark);
     const res = await fetch(DOC_URL, {

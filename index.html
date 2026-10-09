@@ -18,6 +18,7 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="extension/classification.js"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -260,6 +261,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     <div class="field" style="margin-bottom:8px">
       <button id="btn-ai-fill" class="btn btn-ai" onclick="aiFill()" style="width:100%">✨ AIでタグ・コレクション・要約を自動入力</button>
     </div>
+    <div id="ai-classification-suggestions" hidden role="status" style="font-size:12px;color:#555;line-height:1.6;margin-bottom:14px;overflow-wrap:anywhere"></div>
     <div class="field" id="field-summary" style="display:none">
       <label>AI要約</label>
       <div class="ai-summary" id="f-summary"></div>
@@ -430,6 +432,15 @@ function startSync() {
       const data = snapshot.data();
       state.bookmarks = data.bookmarks || [];
       state.collections = data.collections || state.collections;
+      // 分類の統合・名称変更後も、古い選択状態で一覧が空にならないようにする。
+      state.activeCollection = BookmarkClassification.resolveCollectionId(state.activeCollection, state.collections);
+      localStorage.setItem('active_collection', state.activeCollection);
+      if (state.activeTag) {
+        const tag = BookmarkClassification.normalizeTag(state.activeTag);
+        state.activeTag = state.bookmarks.some(b => (b.tags || []).includes(tag)) ? tag : null;
+        if (state.activeTag) localStorage.setItem('active_tag', state.activeTag);
+        else localStorage.removeItem('active_tag');
+      }
       saveCache();
       renderSidebar();
       renderCards();
@@ -1087,7 +1098,7 @@ function tagEsc(s) {
 }
 
 function initTagInput(tags) {
-  selectedTags = tags ? [...tags] : [];
+  selectedTags = BookmarkClassification.normalizeTags(tags);
   renderTagChips();
   const inp = document.getElementById('f-tags-input');
   if (inp) inp.value = '';
@@ -1122,6 +1133,7 @@ function onTagKeydown(e) {
 }
 
 function addTagToSelected(tag) {
+  tag = BookmarkClassification.normalizeTag(tag);
   const t = tag.trim();
   if (t && !selectedTags.includes(t)) { selectedTags.push(t); renderTagChips(); }
   document.getElementById('f-tags-input').value = '';
@@ -1209,6 +1221,7 @@ async function modalRefetchThumb() {
 }
 
 async function openAddModal() {
+  BookmarkClassification.showSuggestions(document.getElementById('ai-classification-suggestions'), null);
   state.editingId = null;
   document.getElementById('modal-title').textContent = 'ブックマークを追加';
   document.getElementById('f-url').value = '';
@@ -1241,6 +1254,7 @@ async function openAddModal() {
 }
 
 function openEdit(id) {
+  BookmarkClassification.showSuggestions(document.getElementById('ai-classification-suggestions'), null);
   const b = state.bookmarks.find(x => x.id === id);
   if (!b) return;
   state.editingId = id;
@@ -1274,7 +1288,7 @@ async function saveBookmark() {
   // 入力中のテキストも保存
   const inputVal = document.getElementById('f-tags-input').value.trim();
   if (inputVal && !selectedTags.includes(inputVal)) selectedTags.push(inputVal);
-  const tags = [...selectedTags];
+  const tags = BookmarkClassification.normalizeTags(selectedTags);
   const summary = document.getElementById('f-summary').textContent.trim() || '';
   if (!url) return;
   if (state.editingId) {
@@ -1318,6 +1332,7 @@ async function aiFill() {
   const btn = document.getElementById('btn-ai-fill');
   btn.disabled = true;
   btn.textContent = '✨ 解析中...';
+  BookmarkClassification.showSuggestions(document.getElementById('ai-classification-suggestions'), null);
 
   try {
     // ページ本文を取得
@@ -1333,29 +1348,8 @@ async function aiFill() {
       }
     } catch(e) {}
 
-    const existingCollections = state.collections.filter(c => c.id !== 'all').map(c => c.name).join(', ');
-    const existingTags = [...new Set(state.bookmarks.flatMap(b => b.tags || []))].slice(0, 40).join(', ');
-
-    const prompt = `以下のWebページについて、ブックマーク管理アプリ用にJSON形式で回答してください。
-
-URL: ${url}
-タイトル: ${title || '（未取得）'}
-本文抜粋: ${pageText || '（取得できませんでした）'}
-
-既存のコレクション: ${existingCollections}
-既存のタグ: ${existingTags}
-
-以下のJSON形式で回答してください（他の文字は一切含めない）:
-{
-  "collection": "最も適切なコレクション名（既存から選ぶか、新規名を提案）",
-  "tags": ["タグ1", "タグ2", "タグ3"],
-  "summary": "このページの内容を日本語で2〜3文で要約"
-}
-
-注意:
-- collectionは既存のコレクションから最適なものを選ぶ。どれも合わない場合は新しい名前を提案する
-- tagsは既存タグを優先しつつ、内容に合ったものを3〜5個
-- summaryは日本語で、「このページは〜」という形で簡潔に`;
+    const prompt = BookmarkClassification.buildPrompt({ url, title, pageText,
+      collections: state.collections, bookmarks: state.bookmarks });
 
     // メインモデルがレート制限なら軽量モデルにフォールバック
     const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'];
@@ -1383,21 +1377,12 @@ URL: ${url}
     // JSONブロック抽出
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('レスポンスの解析に失敗しました');
-    const result = JSON.parse(match[0]);
+    const result = BookmarkClassification.sanitizeResult(JSON.parse(match[0]), state.collections, state.bookmarks);
 
     // コレクション選択を更新
     const sel = document.getElementById('f-col');
-    const existingOpt = [...sel.options].find(o => o.value === result.collection || o.text === result.collection);
-    if (existingOpt) {
-      sel.value = existingOpt.value;
-    } else if (result.collection) {
-      // 新規コレクションとして追加オプションを挿入
-      const opt = document.createElement('option');
-      opt.value = result.collection;
-      opt.text = `${result.collection}（新規）`;
-      opt.selected = true;
-      sel.appendChild(opt);
-    }
+    if (result.collectionId !== null) sel.value = result.collectionId;
+    BookmarkClassification.showSuggestions(document.getElementById('ai-classification-suggestions'), result);
 
     // タグをセット
     if (Array.isArray(result.tags)) {
@@ -1540,12 +1525,11 @@ function openTagRename(tag) {
 }
 
 async function saveTagRename() {
-  const newName = document.getElementById('f-tag-name').value.trim();
+  const newName = BookmarkClassification.normalizeTag(document.getElementById('f-tag-name').value);
   if (!newName || newName === editingTagName) { closeModal('modal-tag'); return; }
   state.bookmarks.forEach(b => {
     if (!b.tags) return;
-    const idx = b.tags.indexOf(editingTagName);
-    if (idx !== -1) b.tags[idx] = newName;
+    b.tags = BookmarkClassification.normalizeTags(b.tags.map(t => t === editingTagName ? newName : t));
   });
   if (state.activeTag === editingTagName) state.activeTag = newName;
   closeModal('modal-tag');

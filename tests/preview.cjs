@@ -26,6 +26,11 @@ firebase.firestore.FieldValue = {serverTimestamp:()=>null};
 </script>`;
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1:4179');
+  if (url.pathname === '/extension/classification.js') {
+    res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.end(fs.readFileSync(path.join(__dirname, '..', 'extension', 'classification.js')));
+  }
   if (url.pathname === '/thumbnail.svg') {
     const i = Number(url.searchParams.get('i')) || 0;
     const colors = ['#dce7ef', '#e9e3d8', '#dce8dc', '#ebe1ef'];

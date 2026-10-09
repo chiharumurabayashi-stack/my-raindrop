@@ -52,7 +52,7 @@ Chrome 拡張機能からも保存可能。運用対象は `index.html` のオ�
 | PWA | Web App Manifest でホーム画面への追加に対応。Service Worker は旧キャッシュ削除用 |
 | Chrome 拡張 | Manifest V3、Firestore REST API 使用 |
 | タイトル取得 | corsproxy.io + DOMParser → microlink.io フォールバック |
-| ビルドツール | なし（単一 HTML ファイル構成） |
+| ビルドツール | なし（HTMLと共通の分類スクリプトを直接配信） |
 
 ---
 
@@ -60,7 +60,7 @@ Chrome 拡張機能からも保存可能。運用対象は `index.html` のオ�
 
 ```
 my-raindrop/
-├── index.html            メインアプリ（UI・ロジック・Firebase 連携をすべて含む）
+├── index.html            メインアプリ（UI・ロジック・Firebase 連携）
 ├── manifest.json         PWA 設定（アプリ名・アイコン・表示モード）
 ├── sw.js                 Service Worker（旧キャッシュの削除のみ）
 ├── icon.svg              ホーム画面・ブラウザタブ用アイコン
@@ -72,12 +72,19 @@ my-raindrop/
 └── extension/
     ├── manifest.json     拡張機能マニフェスト（Manifest V3）
     ├── popup.html        拡張機能ポップアップ UI
+    ├── classification.js Web版と拡張機能で共通の分類ルール
     └── popup.js          拡張機能ロジック（Firestore REST API）
 ```
 
 ---
 
 ## データ構造
+
+### 分類ルール
+
+コレクションは主用途、タグは具体的な検索語として扱う。タグ入力・保存・一括リネーム時に表記を正規化して重複を除く。AIには全既存タグと既存コレクションを渡し、既存タグを0〜3個、既存コレクションを1個まで選ばせる。回答は共通スクリプトで検証し、新規のタグ・コレクションは別の未適用候補欄に表示する。AI回答から自動で新規分類を作らない。手動入力のタグ数は制限しない。
+
+2026年10月の整理では「学習」「研究資料」を統合し、単独だった「スマートシティ」を「クリエイティブ」に移した。「ツール」「資産管理」「ストリーミング」「記事アーカイブ」は用途が伝わる名前に変更した。旧分類の選択状態は同期時に新分類へ引き継ぐ。個人データの作業用バックアップは公開対象外の `local-data/` に保存する。
 
 ### Firestore ドキュメントパス
 
