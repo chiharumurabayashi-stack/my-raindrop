@@ -1,4 +1,5 @@
 [hidden]{display:none!important}
+:root{--favorite-color:#c92f68;--favorite-bg:#fff0f5;--favorite-hover:#ffe0eb;--favorite-border:#df7ba0}
 button,input,select{font-family:inherit}
 button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2px}
 .search-wrap{min-width:0}
@@ -33,8 +34,10 @@ button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2p
 .card-title a:hover{color:#1a56db}
 .card-body{min-width:0}
 .card-body .card-summary{padding:5px 0 0}
-.card-action-btn.pinned{background:#e8f0fe;border-color:#1a56db;color:#1a56db}
-.card-action-btn.pinned:hover{background:#d0e2fd}
+.card-action-btn.pinned{background:var(--favorite-bg);border-color:var(--favorite-border);color:var(--favorite-color)}
+.card-action-btn.pinned:hover{background:var(--favorite-hover)}
+.favorite-icon,.search-option[data-action=favorites] .option-icon{color:var(--favorite-color)}
+.filter-chip[data-remove=favorites]{background:var(--favorite-bg);color:var(--favorite-color)}
 .card .tag{border:0;font-family:inherit}
 .grid.layout-list,.grid.layout-headlines{display:flex;flex-direction:column;gap:0;background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden}
 .layout-list .card,.layout-headlines .card{border:0;border-bottom:0.5px solid rgba(0,0,0,.08);border-radius:0;display:grid;grid-template-columns:104px minmax(0,1fr);padding:16px 112px 16px 16px;gap:16px;align-items:start;min-height:92px;background:transparent}
