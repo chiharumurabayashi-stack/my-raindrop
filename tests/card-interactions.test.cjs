@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
+const BookmarkLibrary = require('../library.js');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const dragCode = html.split('// ========== ドラッグ＆ドロップ ==========')[1]
   .split('// コレクション並び替え')[0];
@@ -64,11 +65,11 @@ test('drop position handles card halves, gaps, row wrap, and single column', () 
   assert.equal(single.height, 3);
 });
 
-test('home section drop persists visible order without changing ordinary list order', async () => {
+test('favorites drop persists visible order without changing ordinary list order', async () => {
   const grid = gridFixture(2);
   grid.dataset.orderKey = 'quickAccessOrder';
   let saves = 0;
-  const state = { bookmarks: [1, 2, 3, 4].map(id => ({ id })) };
+  const state = { bookmarks: [1, 2, 3, 4].map(id => ({ id, pinned:true })) };
   const ctx = runtime({ state, renderSidebar() {}, renderCards() {}, saveToFirestore: async () => { saves++; } });
   ctx.grid = grid;
   vm.runInContext('draggingBookmarkId = 1; dragSourceGrid = grid;', ctx);
@@ -79,9 +80,31 @@ test('home section drop persists visible order without changing ordinary list or
   assert.equal(saves, 1);
 });
 
+test('filtered favorites keep unique positions for hidden items', async () => {
+  const grid = gridFixture(2);
+  grid.dataset.orderKey = 'quickAccessOrder';
+  const state = { bookmarks:[1,2,3,4,5].map((id,i)=>({id,pinned:true,quickAccessOrder:i})) };
+  const ctx = runtime({state,renderSidebar(){},renderCards(){},saveToFirestore:async()=>{}});
+  ctx.grid=grid;
+  vm.runInContext('draggingBookmarkId=1;dragSourceGrid=grid;',ctx);
+  await ctx.cardDrop({target:{closest:()=>grid},clientX:390,clientY:350,preventDefault(){},stopPropagation(){}});
+  assert.deepEqual([...state.bookmarks].sort((a,b)=>a.quickAccessOrder-b.quickAccessOrder).map(b=>b.id),[2,3,4,1,5]);
+  assert.equal(new Set(state.bookmarks.map(b=>b.quickAccessOrder)).size,5);
+});
+
+test('insertion line follows zero-gap list rows and the nearest masonry column', () => {
+  const ctx=runtime({getComputedStyle:()=>({rowGap:'0px',columnGap:'12px'})});
+  assert.equal(ctx.getCardDropPosition(gridFixture(1),80,590).top,610.5);
+  const card=(id,left,top,height)=>({dataset:{bookmarkId:String(id)},getBoundingClientRect:()=>({left,top,right:left+200,bottom:top+height,width:200,height})});
+  const grid={dataset:{layout:'moodboard'},querySelectorAll:()=>[card(1,0,0,100),card(2,0,112,100),card(3,212,0,250)]};
+  const position=ctx.getCardDropPosition(grid,100,106);
+  assert.equal(position.targetId,1);
+  assert.equal(position.height,3);
+});
+
 test('cards use accessible thumbnail links and have no open button', () => {
-  const ctx = vm.createContext({ tagEsc: s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;') });
-  vm.runInContext('function cardHTML(b) {' + html.split('function cardHTML(b) {')[1].split('function renderCards()')[0], ctx);
+  const ctx = vm.createContext({ BookmarkLibrary, uiEscape: BookmarkLibrary.escapeHTML });
+  vm.runInContext('function cardHTML(' + html.split('function cardHTML(')[1].split('function renderCards()')[0], ctx);
   for (const thumb of ['https://example.com/image.png', '🌐', '']) {
     const card = ctx.cardHTML({ id: 1, url: 'https://example.com/?a=1&b=2', title: 'Test "page"', thumb });
     assert.match(card, /<a class="card-thumb"/);
@@ -92,11 +115,11 @@ test('cards use accessible thumbnail links and have no open button', () => {
   }
 });
 
-test('opening a home thumbnail records usage but defers removal of the active link', () => {
+test('opening a thumbnail records usage without removing the active link', () => {
   const scheduled = [];
   let renders = 0, saves = 0;
   const ctx = vm.createContext({
-    state: { activeCollection: '__home__', bookmarks: [{ id: 1, useCount: 3 }] },
+    state: { activeCollection: 'all', bookmarks: [{ id: 1, useCount: 3 }] },
     saveCache() {}, saveToFirestore() { saves++; }, renderCards() { renders++; },
     setTimeout(callback) { scheduled.push(callback); },
   });
@@ -105,8 +128,7 @@ test('opening a home thumbnail records usage but defers removal of the active li
   assert.equal(ctx.state.bookmarks[0].useCount, 4);
   assert.equal(saves, 1);
   assert.equal(renders, 0, 'do not remove the link during its click handler');
-  scheduled[0]();
-  assert.equal(renders, 1);
+  assert.equal(scheduled.length, 0);
 });
 
 test('inline scripts have valid JavaScript syntax', () => {

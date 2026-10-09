@@ -18,7 +18,9 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="extension/classification.js"></script>
+<script src="extension/classification.js?v=20261009-browse"></script>
+<script src="library.js?v=20261009-browse"></script>
+<script src="browse.js?v=20261009-browse"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -80,9 +82,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .card-action-btn.danger:hover{background:#fff0f0}
 .card-action-btn.pinned{background:#fff6d8;border-color:#e8c547}
 .card-action-btn.pinned:hover{background:#fff0bf}
-.home-section{margin-bottom:28px}
-.home-section-title{font-size:12px;font-weight:500;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.06em}
-.home-section-title .count{font-size:11px;color:#bbb;font-weight:normal}
 .card-thumb{height:110px;background:#f5f5f3;display:flex;align-items:center;justify-content:center;font-size:32px;color:inherit;text-decoration:none;cursor:pointer}
 .card-thumb:hover{filter:brightness(0.96)}
 .card-thumb:focus-visible{outline:2px solid #1a56db;outline-offset:-3px}
@@ -172,6 +171,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   .grid{grid-template-columns:1fr 1fr}
 }
 </style>
+<link rel="stylesheet" href="browse.css?v=20261009-browse">
 </head>
 <body>
 
@@ -192,6 +192,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
     </div>
 
     <div class="sidebar-scroll">
+      <div id="library-nav" aria-label="ライブラリ"></div>
       <div class="sidebar-label" id="label-col" onclick="toggleSection('col')">
         コレクション <span class="collapse-icon">▼</span>
       </div>
@@ -227,10 +228,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       </button>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" placeholder="ブックマークを検索..." id="search-input" oninput="renderCards()">
+        <input type="text" placeholder="検索、または条件を選択..." id="search-input" role="combobox" aria-label="ブックマークを検索" aria-autocomplete="list" aria-expanded="false" aria-controls="search-menu" autocomplete="off">
+        <div class="search-tools"><button class="icon-button" id="search-clear" aria-label="検索文字をクリア" hidden>×</button><button class="icon-button" id="search-filter-button" aria-label="検索条件を選ぶ" aria-expanded="false" aria-controls="search-menu">⌄</button></div>
+        <div class="search-menu" id="search-menu" role="listbox" aria-label="検索条件" hidden></div>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 追加</button>
     </div>
+    <div class="browse-toolbar">
+      <h1 class="browse-title"><span id="browse-title">すべてのブックマーク</span><span id="result-count" aria-live="polite"></span></h1>
+      <div class="view-wrap"><button class="btn btn-sm" id="view-button" aria-expanded="false" aria-controls="view-menu">リスト ▾</button><div class="view-menu" id="view-menu" role="region" aria-label="表示設定" hidden></div></div>
+    </div>
+    <div class="filter-chips" id="filter-chips" aria-label="選択中の検索条件" hidden></div>
     <div class="content">
       <div class="grid" id="card-grid"></div>
     </div>
@@ -367,8 +375,8 @@ let state = {
     { id: 'Design', name: 'Design', icon: '🎨' },
     { id: '読み物', name: '読み物', icon: '📰' },
   ],
-  activeCollection: '__home__',
-  activeTag: null,
+  activeCollection: 'all',
+  activeTags: [],
   editingId: null,
 };
 
@@ -396,8 +404,12 @@ function loadCache() {
       if (d.collections) state.collections = d.collections;
     }
   } catch(e) {}
-  state.activeCollection = localStorage.getItem('active_collection') || '__home__';
-  state.activeTag = localStorage.getItem('active_tag') || null;
+  state.activeCollection = localStorage.getItem('active_collection') || 'all';
+  if (state.activeCollection === '__home__') state.activeCollection = 'all';
+  try {
+    const savedTags = JSON.parse(localStorage.getItem('active_tags') || 'null');
+    state.activeTags = BookmarkClassification.normalizeTags(savedTags || [localStorage.getItem('active_tag')]);
+  } catch { state.activeTags = []; }
 }
 
 // ========== Firestore 保存 ==========
@@ -435,12 +447,9 @@ function startSync() {
       // 分類の統合・名称変更後も、古い選択状態で一覧が空にならないようにする。
       state.activeCollection = BookmarkClassification.resolveCollectionId(state.activeCollection, state.collections);
       localStorage.setItem('active_collection', state.activeCollection);
-      if (state.activeTag) {
-        const tag = BookmarkClassification.normalizeTag(state.activeTag);
-        state.activeTag = state.bookmarks.some(b => (b.tags || []).includes(tag)) ? tag : null;
-        if (state.activeTag) localStorage.setItem('active_tag', state.activeTag);
-        else localStorage.removeItem('active_tag');
-      }
+      state.activeTags = BookmarkClassification.normalizeTags(state.activeTags)
+        .filter(tag => state.bookmarks.some(b => (b.tags || []).includes(tag)));
+      persistActiveTags();
       saveCache();
       renderSidebar();
       renderCards();
@@ -499,46 +508,34 @@ function importJSON(event) {
 
 // ========== 描画 ==========
 function renderSidebar() {
-  const list = document.getElementById('collection-list');
-  const unclassifiedCnt = state.bookmarks.filter(b => !b.collection).length;
-  const home = [{id: '__home__', name: 'ホーム', icon: '🏠', _virtual: true}];
-  const unclassified = unclassifiedCnt > 0 ? [{id: '__unclassified__', name: '未分類', icon: '📂', _virtual: true}] : [];
-  list.innerHTML = [...home, ...state.collections, ...unclassified].map(c => {
-    const cnt = c.id === 'all' ? state.bookmarks.length
-      : c.id === '__unclassified__' ? unclassifiedCnt
-      : c.id === '__home__' ? ''
-      : state.bookmarks.filter(b => b.collection === c.id).length;
-    const isDraggable = c.id !== 'all' && c.id !== '__unclassified__' && c.id !== '__home__';
-    const actions = isDraggable ? `
-      <span class="col-actions">
-        <button class="col-btn" onclick="event.stopPropagation();openEditCollection('${c.id}')" title="編集">✏️</button>
-        <button class="col-btn" onclick="event.stopPropagation();deleteCollection('${c.id}')" title="削除">🗑</button>
-      </span>` : '';
-    const dragHandle = isDraggable ? `<span style="color:#ccc;cursor:grab;font-size:12px;margin-right:-4px" ondragstart="colDragStart(event,'${c.id}')" draggable="true" onclick="event.stopPropagation()">⠿</span>` : '';
-    return `<div class="sidebar-item${state.activeCollection === c.id && !state.activeTag ? ' active' : ''}"
-      onclick="setCollection('${c.id}')"
-      ondragover="colDragOver(event,'${c.id}')"
-      ondragleave="colDragLeave(this)"
-      ondrop="event.dataTransfer.getData('type')==='bookmark'?dropToCollection(event,'${c.id}'):colDrop(event,'${c.id}')"
-      ondragend="document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.remove('col-drag-above','col-drag-below','drag-over'))"
-      >
-      ${dragHandle}
-      <span style="font-size:14px;flex-shrink:0">${c.icon}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
-      <span class="count">${cnt}</span>
-      ${actions}
+  const entries = [
+    {id:'all',name:'すべて',icon:'▦',count:state.bookmarks.length,_virtual:true},
+    {id:'__favorites__',name:'お気に入り',icon:'♡',count:state.bookmarks.filter(b=>b.pinned).length,_virtual:true},
+    {id:'__unclassified__',name:'未分類',icon:'▱',count:state.bookmarks.filter(b=>!b.collection).length,_virtual:true},
+    ...state.collections.filter(c => c.id !== 'all'),
+  ];
+  const arg = value => uiEscape(JSON.stringify(value));
+  const renderEntry = c => {
+    const id = arg(c.id);
+    const count = c._virtual ? c.count : state.bookmarks.filter(b => b.collection === c.id).length;
+    return `<div class="sidebar-item${state.activeCollection === c.id ? ' active' : ''}" role="button" tabindex="0"
+      onclick="setCollection(${id})" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();setCollection(${id})}"
+      ondragover="colDragOver(event,${id})" ondragleave="colDragLeave(this)"
+      ondrop="event.dataTransfer.getData('type')==='bookmark'?dropToCollection(event,${id}):colDrop(event,${id})"
+      ondragend="document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.remove('col-drag-above','col-drag-below','drag-over'))">
+      ${c._virtual ? '' : `<span style="color:#aaa;cursor:grab;font-size:12px" draggable="true" ondragstart="colDragStart(event,${id})" onclick="event.stopPropagation()">⠿</span>`}
+      <span style="font-size:14px;flex-shrink:0">${uiEscape(c.icon)}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uiEscape(c.name)}</span>
+      <span class="count">${count}</span>
+      ${c._virtual ? '' : `<span class="col-actions"><button class="col-btn" onclick="event.stopPropagation();openEditCollection(${id})" title="編集">✏️</button><button class="col-btn" onclick="event.stopPropagation();deleteCollection(${id})" title="削除">🗑</button></span>`}
     </div>`;
-  }).join('');
-
-  const tagMap = {};
-  state.bookmarks.forEach(b => (b.tags || []).forEach(t => { tagMap[t] = (tagMap[t] || 0) + 1; }));
-  document.getElementById('tag-list').innerHTML = Object.keys(tagMap).sort().map(t =>
-    `<span class="tag" style="${state.activeTag === t ? 'outline:1.5px solid #1a56db' : ''}"
-      onclick="setTag('${tagEsc(t)}')"
-      oncontextmenu="openCtxMenu(event,'${tagEsc(t)}')">${tagEsc(t)}</span>`
-  ).join('');
-  // 折りたたみ高さを再計算
-  requestAnimationFrame(() => { if (typeof applySection === 'function') { applySection('col'); applySection('tag'); } });
+  };
+  document.getElementById('library-nav').innerHTML = entries.filter(c => c._virtual).map(renderEntry).join('');
+  document.getElementById('collection-list').innerHTML = entries.filter(c => !c._virtual).map(renderEntry).join('');
+  document.getElementById('tag-list').innerHTML = BookmarkLibrary.tagCounts(state.bookmarks).map(([tag,count]) =>
+    `<button class="tag" style="border:0;${state.activeTags.includes(tag) ? 'outline:1.5px solid #1a56db' : ''}" data-filter-tag="${uiEscape(tag)}"
+      title="${count}件" oncontextmenu="openCtxMenu(event,${arg(tag)})">${uiEscape(tag)}</button>`).join('');
+  requestAnimationFrame(() => { applySection('col'); applySection('tag'); });
 }
 
 function openSidebar() {
@@ -550,9 +547,9 @@ function closeSidebar() {
   document.getElementById('sidebar-overlay').classList.remove('open');
 }
 function setCollection(id) {
-  state.activeCollection = id; state.activeTag = null;
-  localStorage.setItem('active_collection', id);
-  localStorage.removeItem('active_tag');
+  resetBrowseFilters();
+  state.activeCollection = id === '__home__' ? 'all' : id;
+  localStorage.setItem('active_collection', state.activeCollection);
   renderSidebar(); renderCards();
   if (window.innerWidth <= 600) closeSidebar();
 }
@@ -592,8 +589,14 @@ async function dropToCollection(event, collectionId) {
   if (event.dataTransfer.getData('type') !== 'bookmark') return;
   const id = Number(event.dataTransfer.getData('bookmarkId'));
   const b = state.bookmarks.find(x => x.id === id);
-  if (!b || b.collection === collectionId) return;
-  b.collection = collectionId === 'all' ? '' : collectionId;
+  if (!b || collectionId === 'all') return;
+  if (collectionId === '__favorites__') b.pinned = true;
+  else {
+    const destination = collectionId === '__unclassified__' ? '' : collectionId;
+    if (b.collection === destination) return;
+    b.collection = destination;
+  }
+  cardDragEnd();
   renderSidebar();
   renderCards();
   await saveToFirestore();
@@ -605,14 +608,14 @@ function getCardDropPosition(grid, x, y) {
   if (!cards.length) return null;
   const entries = cards.map(card => ({ card, rect: card.getBoundingClientRect() }));
   const distance = (value, start, end) => Math.max(start - value, 0, value - end);
-  entries.sort((a, b) =>
-    distance(y, a.rect.top, a.rect.bottom) - distance(y, b.rect.top, b.rect.bottom) ||
-    distance(x, a.rect.left, a.rect.right) - distance(x, b.rect.left, b.rect.right));
+  const squaredDistance = rect => distance(y, rect.top, rect.bottom) ** 2 + distance(x, rect.left, rect.right) ** 2;
+  entries.sort((a, b) => squaredDistance(a.rect) - squaredDistance(b.rect));
   const { card, rect } = entries[0];
-  const singleColumn = entries.every(entry => Math.abs(entry.rect.left - rect.left) < 1);
+  const singleColumn = grid.dataset.layout === 'moodboard' || entries.every(entry => Math.abs(entry.rect.left - rect.left) < 1);
   const before = singleColumn ? y < rect.top + rect.height / 2 : x < rect.left + rect.width / 2;
   const style = getComputedStyle(grid);
-  const gap = parseFloat(singleColumn ? style.rowGap : style.columnGap) || 12;
+  const parsedGap = parseFloat(singleColumn ? style.rowGap : style.columnGap);
+  const gap = Number.isFinite(parsedGap) ? parsedGap : 12;
   return {
     targetId: Number(card.dataset.bookmarkId), before,
     left: singleColumn ? rect.left : (before ? rect.left - gap / 2 : rect.right + gap / 2) - 1.5,
@@ -664,9 +667,10 @@ async function cardDrop(event) {
   cardDragEnd();
   if (!position) return;
   const orderKey = grid.dataset.orderKey;
-  if (orderKey === 'quickAccessOrder' || orderKey === 'recentOrder') {
-    const items = [...grid.querySelectorAll(':scope > .card')]
-      .map(card => state.bookmarks.find(b => b.id === Number(card.dataset.bookmarkId))).filter(Boolean);
+  if (orderKey === 'quickAccessOrder') {
+    // Reorder the full favorites sequence so a filtered view cannot duplicate hidden positions.
+    const items = state.bookmarks.filter(b => b.pinned)
+      .sort((a,b) => (a.quickAccessOrder ?? Number.MAX_SAFE_INTEGER) - (b.quickAccessOrder ?? Number.MAX_SAFE_INTEGER));
     if (!moveBookmark(items, fromId, position.targetId, position.before)) return;
     items.forEach((b, index) => { b[orderKey] = index; });
   } else if (!moveBookmark(state.bookmarks, fromId, position.targetId, position.before)) return;
@@ -729,104 +733,46 @@ async function colDrop(event, targetId) {
   await saveToFirestore();
 }
 function setTag(t) {
-  state.activeTag = state.activeTag === t ? null : t;
-  if (state.activeTag) localStorage.setItem('active_tag', state.activeTag);
-  else localStorage.removeItem('active_tag');
+  state.activeTags = state.activeTags.includes(t) ? state.activeTags.filter(tag => tag !== t) : [...state.activeTags,t];
+  browse.untagged = false;
+  persistActiveTags();
   renderSidebar(); renderCards();
   if (window.innerWidth <= 600) closeSidebar();
 }
 
-function cardHTML(b) {
-  return `
-    <div class="card" draggable="true" data-bookmark-id="${b.id}"
-      ondragstart="dragStart(event, ${b.id})">
-      <span class="card-drag-handle" title="ドラッグしてカードの間に移動" aria-hidden="true">⠿</span>
-      <div class="card-actions">
-        <button class="card-action-btn${b.pinned ? ' pinned' : ''}" onclick="togglePin(${b.id})" title="${b.pinned ? 'ピン留めを解除' : 'ピン留め'}">📌</button>
-        <button class="card-action-btn" onclick="openEdit(${b.id})" title="編集">✏️</button>
-        <button class="card-action-btn danger" onclick="deleteBookmark(${b.id})" title="削除">🗑</button>
-      </div>
-      <a class="card-thumb" href="${tagEsc(b.url)}" target="_blank" rel="noopener" draggable="false"
-        aria-label="${tagEsc(b.title)}（新しいタブで開く）" title="${tagEsc(b.title)}を開く ↗"
-        onclick="recordOpen(${b.id})">${b.thumb && b.thumb.startsWith('http')
-        ? b.thumb.includes('google.com/s2/favicons')
-          ? `<img src="${b.thumb}" alt="" style="width:48px;height:48px;object-fit:contain" onerror="retryThumb(${b.id},this)">`
-          : `<img src="${b.thumb}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="retryThumb(${b.id},this)">`
-        : `<span style="font-size:32px">${b.thumb || '🌐'}</span>`
-      }</a>
-      <div class="card-body">
-        <div class="card-title" title="${b.title}">${b.title}</div>
-        <div class="card-url">${b.url.replace(/^https?:\/\//, '').split('/')[0]}</div>
-        <div class="tags">${(b.tags || []).map(t => `<span class="tag" onclick="setTag('${t}')">${t}</span>`).join('')}</div>
-      </div>
-      ${b.summary ? `<div class="card-summary">${b.summary}</div>` : ''}
+function cardHTML(b, view = BookmarkLibrary.defaults()) {
+  const mode = view.layout, options = view.options[mode];
+  const title = uiEscape(b.title || b.url), url = uiEscape(BookmarkLibrary.safeURL(b.url));
+  const thumb = BookmarkLibrary.safeURL(b.thumb);
+  const link = `href="${url || '#'}" target="_blank" rel="noopener" draggable="false" aria-label="${title}（新しいタブで開く）" onclick="${url ? 'recordOpen(' + Number(b.id) + ')' : 'return false'}"`;
+  const image = thumb ? `<img src="${uiEscape(thumb)}" alt="" style="${thumb.includes('google.com/s2/favicons') ? 'width:48px;height:48px;object-fit:contain' : 'width:100%;height:100%;object-fit:cover'}" onerror="retryThumb(${Number(b.id)},this)">` : `<span style="font-size:32px">${uiEscape(b.thumb && !String(b.thumb).startsWith('http') ? b.thumb : '🌐')}</span>`;
+  return `<div class="card" draggable="true" data-bookmark-id="${Number(b.id)}" ondragstart="dragStart(event, ${Number(b.id)})">
+    <span class="card-drag-handle" title="ドラッグしてカードの間に移動" aria-hidden="true">⠿</span>
+    <div class="card-actions">
+      <button class="card-action-btn${b.pinned ? ' pinned' : ''}" onclick="togglePin(${Number(b.id)})" aria-pressed="${!!b.pinned}" title="${b.pinned ? 'お気に入りを解除' : 'お気に入りに追加'}">♡</button>
+      <button class="card-action-btn" onclick="openEdit(${Number(b.id)})" title="編集">✏️</button>
+      <button class="card-action-btn danger" onclick="deleteBookmark(${Number(b.id)})" title="削除">🗑</button>
     </div>
-  `;
+    ${options.cover ? `<a class="card-thumb" ${link}>${image}</a>` : ''}
+    <div class="card-body">
+      ${options.title ? `<div class="card-title" title="${title}"><a ${link}>${title}</a></div>` : ''}
+      ${options.url ? `<div class="card-url">${uiEscape(String(b.url || '').replace(/^https?:\/\//, '').split('/')[0])}</div>` : ''}
+      ${options.tags ? `<div class="tags">${(b.tags || []).map(t => `<button class="tag" data-filter-tag="${uiEscape(t)}">${uiEscape(t)}</button>`).join('')}</div>` : ''}
+      ${options.description && b.summary ? `<div class="card-summary">${uiEscape(b.summary)}</div>` : ''}
+    </div>
+  </div>`;
 }
 
 function renderCards() {
-  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  const items = visibleBookmarks();
+  if (state.activeCollection === '__favorites__') items.sort((a,b) => (a.quickAccessOrder ?? Number.MAX_SAFE_INTEGER) - (b.quickAccessOrder ?? Number.MAX_SAFE_INTEGER));
+  const view = currentView(), options = view.options[view.layout];
   const grid = document.getElementById('card-grid');
-
-  // ホーム画面: クイックアクセス + 最近使った
-  if (state.activeCollection === '__home__' && !state.activeTag && !q) {
-    // スコア = useCount × 0.5^(経過日数 / 30)  … 30日半減
-    const QUICK_ACCESS_MIN_SCORE = 3;
-    const now = Date.now();
-    const DAY = 86400000;
-    const scoreOf = b => {
-      const uc = b.useCount || 0;
-      if (!uc) return 0;
-      const days = b.lastUsedAt ? (now - b.lastUsedAt) / DAY : 999;
-      return uc * Math.pow(0.5, days / 30);
-    };
-    const pinned = state.bookmarks.filter(b => b.pinned);
-    const byScore = state.bookmarks
-      .filter(b => !b.pinned && scoreOf(b) >= QUICK_ACCESS_MIN_SCORE)
-      .sort((a, b) => scoreOf(b) - scoreOf(a));
-    const quickAccess = [...pinned, ...byScore].slice(0, 12);
-    const byManualOrder = key => (a, b) => (a[key] ?? Number.MAX_SAFE_INTEGER) - (b[key] ?? Number.MAX_SAFE_INTEGER);
-    quickAccess.sort(byManualOrder('quickAccessOrder'));
-
-    // 「最近使った」はクイックアクセスに出ていないものだけ
-    const qaIds = new Set(quickAccess.map(b => b.id));
-    const recent = state.bookmarks
-      .filter(b => b.lastUsedAt && !qaIds.has(b.id))
-      .sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0))
-      .slice(0, 12)
-      .sort(byManualOrder('recentOrder'));
-
-    let html = '';
-    if (quickAccess.length) {
-      html += `<div class="home-section">
-        <div class="home-section-title">📌 クイックアクセス <span class="count">${quickAccess.length}</span></div>
-        <div class="grid" data-order-key="quickAccessOrder">${quickAccess.map(cardHTML).join('')}</div>
-      </div>`;
-    }
-    if (recent.length) {
-      html += `<div class="home-section">
-        <div class="home-section-title">🕒 最近使った項目 <span class="count">${recent.length}</span></div>
-        <div class="grid" data-order-key="recentOrder">${recent.map(cardHTML).join('')}</div>
-      </div>`;
-    }
-    if (!html) {
-      html = `<div class="empty"><div class="emoji">🏠</div><p>ホーム画面は空です</p><p style="margin-top:6px;font-size:12px">ブックマークを開いたり📌でピン留めするとここに表示されます</p></div>`;
-    }
-    grid.outerHTML = `<div id="card-grid">${html}</div>`;
-    return;
-  }
-
-  let items = state.bookmarks;
-  if (state.activeCollection === '__unclassified__') items = items.filter(b => !b.collection);
-  else if (state.activeCollection !== 'all' && state.activeCollection !== '__home__') items = items.filter(b => b.collection === state.activeCollection);
-  if (state.activeTag) items = items.filter(b => (b.tags || []).includes(state.activeTag));
-  if (q) items = items.filter(b => (b.title + b.url + (b.tags || []).join(' ')).toLowerCase().includes(q));
-
-  if (!items.length) {
-    grid.outerHTML = `<div class="grid" id="card-grid"><div class="empty"><div class="emoji">🔖</div><p>ブックマークがありません</p><p style="margin-top:6px;font-size:12px">「+ 追加」からURLを保存しましょう</p></div></div>`;
-    return;
-  }
-  grid.outerHTML = `<div class="grid" id="card-grid">${items.map(cardHTML).join('')}</div>`;
+  grid.className = `grid layout-${view.layout}${options.cover ? '' : ' no-cover'} cover-${options.coverSide}`;
+  grid.dataset.layout = view.layout;
+  grid.dataset.orderKey = state.activeCollection === '__favorites__' ? 'quickAccessOrder' : '';
+  grid.innerHTML = items.length ? items.map(b => cardHTML(b, view)).join('') : `<div class="empty"><strong>${state.activeCollection === '__favorites__' && !state.activeTags.length && !searchQuery() ? 'お気に入りはまだありません' : '該当するブックマークはありません'}</strong><p>${state.activeCollection === '__favorites__' ? 'カードの♡からお気に入りに追加できます。' : '検索条件を減らすか、別のコレクションを選んでください。'}</p><button class="btn btn-sm" onclick="resetBrowseFilters();renderSidebar();renderCards()">検索条件をクリア</button></div>`;
+  renderBrowseChrome(items.length);
 }
 
 function recordOpen(id) {
@@ -836,11 +782,6 @@ function recordOpen(id) {
   b.lastUsedAt = Date.now();
   // ローカルキャッシュに即保存（ページ更新で失わないように）
   saveCache();
-  // リンクの標準動作が完了する前に要素を消すと、新しいタブが開かないことがある。
-  // 再描画はクリック処理の完了後に行う。
-  if (state.activeCollection === '__home__') {
-    setTimeout(() => { if (state.activeCollection === '__home__') renderCards(); }, 0);
-  }
   // Firestoreにも即保存
   saveToFirestore();
 }
@@ -849,6 +790,7 @@ async function togglePin(id) {
   const b = state.bookmarks.find(x => x.id === id);
   if (!b) return;
   b.pinned = !b.pinned;
+  renderSidebar();
   renderCards();
   await saveToFirestore();
 }
@@ -1235,7 +1177,7 @@ async function openAddModal() {
   renderThumbPreview(null);
   initTagInput([]);
   const sel = document.getElementById('f-col');
-  const activeCol = state.activeCollection === 'all' ? '' : state.activeCollection;
+  const activeCol = state.collections.some(c => c.id === state.activeCollection && c.id !== 'all') ? state.activeCollection : '';
   sel.innerHTML = `<option value=""${activeCol === '' ? ' selected' : ''}>未分類</option>` +
     state.collections.filter(c => c.id !== 'all').map(c =>
       `<option value="${c.id}"${c.id === activeCol ? ' selected' : ''}>${c.name}</option>`
@@ -1531,7 +1473,8 @@ async function saveTagRename() {
     if (!b.tags) return;
     b.tags = BookmarkClassification.normalizeTags(b.tags.map(t => t === editingTagName ? newName : t));
   });
-  if (state.activeTag === editingTagName) state.activeTag = newName;
+  state.activeTags = [...new Set(state.activeTags.map(t => t === editingTagName ? newName : t))];
+  persistActiveTags();
   closeModal('modal-tag');
   renderSidebar();
   renderCards();
@@ -1542,14 +1485,15 @@ async function deleteTag(tag) {
   const cnt = state.bookmarks.filter(b => (b.tags || []).includes(tag)).length;
   if (!confirm(`タグ「${tag}」を削除しますか？\n（${cnt}件のブックマークから除去されます）`)) return;
   state.bookmarks.forEach(b => { if (b.tags) b.tags = b.tags.filter(t => t !== tag); });
-  if (state.activeTag === tag) state.activeTag = null;
+  state.activeTags = state.activeTags.filter(t => t !== tag);
+  persistActiveTags();
   renderSidebar();
   renderCards();
   await saveToFirestore();
 }
 
 // ========== セクション折りたたみ ==========
-const sectionState = { col: true, tag: true };
+const sectionState = { col: true, tag: false };
 
 function toggleSection(key) {
   sectionState[key] = !sectionState[key];
@@ -1563,6 +1507,8 @@ function applySection(key) {
   const open  = sectionState[key];
   body.style.maxHeight  = open ? body.scrollHeight + 'px' : '0';
   body.style.overflow   = open ? 'visible' : 'hidden';
+  body.inert = !open;
+  body.setAttribute('aria-hidden', String(!open));
   label.classList.toggle('collapsed', !open);
 }
 
@@ -1611,6 +1557,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ========== 起動 ==========
+initBrowse();
 startSync();
 initSections();
 document.getElementById('hamburger-btn').addEventListener('click', openSidebar);

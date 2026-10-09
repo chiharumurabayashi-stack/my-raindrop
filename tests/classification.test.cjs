@@ -63,7 +63,7 @@ test('renamed and merged collections preserve the selected view', () => {
   assert.equal(taxonomy.resolveCollectionId('研究資料',current),'学習・研究');
   assert.equal(taxonomy.resolveCollectionId('スマートシティ',current),'クリエイティブ');
   assert.equal(taxonomy.resolveCollectionId('missing',current),'all');
-  assert.equal(taxonomy.resolveCollectionId('__home__',current),'__home__');
+  assert.equal(taxonomy.resolveCollectionId('__home__',current),'all');
 });
 
 for (const target of ['web','extension']) {
@@ -97,7 +97,8 @@ for (const target of ['web','extension']) {
 test('both entry points load the shared classifier before their application code', () => {
   const web=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
   const popup=fs.readFileSync(path.join(__dirname,'..','extension','popup.html'),'utf8');
-  assert(web.indexOf('src="extension/classification.js"')<web.indexOf('function aiFill()'));
+  const scriptIndex = web.indexOf('src="extension/classification.js');
+  assert(scriptIndex >= 0 && scriptIndex < web.indexOf('function aiFill()'));
   assert(popup.indexOf('src="classification.js"')<popup.indexOf('src="popup.js"'));
   new vm.Script(fs.readFileSync(path.join(__dirname,'..','extension','popup.js'),'utf8'));
 });

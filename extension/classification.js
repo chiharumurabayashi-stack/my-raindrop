@@ -16,7 +16,8 @@
     '記事アーカイブ': '保存した記事', '学習': '学習・研究', '研究資料': '学習・研究', 'スマートシティ': 'クリエイティブ',
   };
   function resolveCollectionId(id, collections) {
-    if (['all', '__home__', '__unclassified__'].includes(id) || collections.some(c => c.id === id)) return id;
+    if (id === '__home__') return 'all';
+    if (['all', '__favorites__', '__unclassified__'].includes(id) || collections.some(c => c.id === id)) return id;
     const renamed = collections.find(c => c.id === collectionAliases[id] || c.name === collectionAliases[id]);
     return renamed ? renamed.id : 'all';
   }
