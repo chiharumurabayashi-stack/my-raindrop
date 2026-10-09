@@ -70,6 +70,16 @@ button:focus-visible,a:focus-visible{outline:2px solid #1a56db;outline-offset:2p
 .empty p{font-size:12px;color:#888;margin-bottom:14px}
 .sidebar-item[role=button]:focus-visible{outline:2px solid #1a56db;outline-offset:-2px}
 #library-nav .count{display:block}
+.library-tools{position:relative;flex-shrink:0;font-weight:normal}
+.library-tools>summary{list-style:none;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:8px;cursor:pointer;font-size:22px;color:#555}
+.library-tools>summary::-webkit-details-marker{display:none}
+.library-tools>summary:hover,.library-tools[open]>summary{background:#f0f0ee}
+.library-tools>summary:focus-visible{outline:2px solid #1a56db;outline-offset:2px}
+.library-tools-menu{position:absolute;right:0;top:calc(100% + 6px);width:196px;padding:6px;background:#fff;border:0.5px solid rgba(0,0,0,.15);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:90}
+.library-tools-menu>button{display:block;width:100%;padding:10px;text-align:left;background:none;border:0;border-radius:6px;color:#1a1a1a;font-size:13px;cursor:pointer}
+.library-tools-menu>button:hover{background:#f0f0ee}
+.library-tools-menu>hr{border:0;border-top:0.5px solid rgba(0,0,0,.08);margin:4px}
+.library-tools-menu>.menu-label{padding:8px 10px 3px;font-size:11px}
 @media (hover:none){.card-actions{opacity:1}}
 @media (max-width:600px){
  .topbar{padding:10px;gap:6px}.topbar>.btn{padding:7px 10px}

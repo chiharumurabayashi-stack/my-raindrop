@@ -20,7 +20,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="extension/classification.js?v=20261009-browse"></script>
 <script src="library.js?v=20261009-browse"></script>
-<script src="browse.js?v=20261009-browse"></script>
+<script src="browse.js?v=20261009-library-menu"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -30,7 +30,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 /* Sidebar */
 .sidebar{width:220px;min-width:220px;background:#fff;border-right:0.5px solid rgba(0,0,0,0.1);display:flex;flex-direction:column;padding:12px 0}
 .sidebar-scroll{flex:1;overflow-y:auto}
-.sidebar-logo{padding:12px 16px 8px;display:flex;align-items:center;gap:8px;font-weight:500;font-size:15px}
 .sidebar-label{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.06em;padding:8px 12px 4px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
 .sidebar-label:hover{color:#555}
 .sidebar-label .collapse-icon{font-size:9px;transition:transform 0.2s;display:inline-block}
@@ -51,7 +50,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .card{cursor:grab}.card.is-dragging{opacity:0.4;cursor:grabbing}
 .card-drop-indicator{position:fixed;background:#1a56db;border-radius:99px;pointer-events:none;z-index:90}
 .sidebar-spacer{flex:1}
-.sidebar-bottom{padding:8px 12px;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:8px}
 
 /* Main */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -171,7 +169,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   .grid{grid-template-columns:1fr 1fr}
 }
 </style>
-<link rel="stylesheet" href="browse.css?v=20261009-list-description">
+<link rel="stylesheet" href="browse.css?v=20261009-library-menu">
 </head>
 <body>
 
@@ -186,11 +184,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 <div class="app">
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-      MyRaindrop
-    </div>
-
     <div class="sidebar-scroll">
       <div id="library-nav" aria-label="ライブラリ"></div>
       <div class="sidebar-label" id="label-col" onclick="toggleSection('col')">
@@ -211,12 +204,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
       </div>
     </div>
 
-    <div class="sidebar-bottom">
-      <button class="btn btn-sm btn-block" onclick="exportJSON()">📥 JSONエクスポート</button>
-      <button class="btn btn-sm btn-block" onclick="document.getElementById('import-file').click()">📤 JSONインポート</button>
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
-      <button class="btn btn-sm btn-block" onclick="openSettings()" style="margin-top:4px">⚙️ 設定</button>
-    </div>
   </div>
 
   <div class="main">
@@ -233,6 +220,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
         <div class="search-menu" id="search-menu" role="listbox" aria-label="検索条件" hidden></div>
       </div>
       <button class="btn btn-primary" onclick="openAddModal()">+ 追加</button>
+      <details class="library-tools" id="library-tools">
+        <summary aria-label="設定とデータ管理" title="設定とデータ管理">⋯</summary>
+        <div class="library-tools-menu">
+          <button type="button" onclick="closeLibraryMenu();openSettings()">設定</button>
+          <hr>
+          <div class="menu-label">データのバックアップ・復元</div>
+          <button type="button" onclick="closeLibraryMenu();exportJSON()">JSONエクスポート</button>
+          <button type="button" onclick="closeLibraryMenu();document.getElementById('import-file').click()">JSONインポート</button>
+        </div>
+      </details>
+      <input type="file" id="import-file" accept=".json" hidden onchange="importJSON(event)">
     </div>
     <div class="browse-toolbar">
       <h1 class="browse-title"><span id="browse-title">すべてのブックマーク</span><span id="result-count" aria-live="polite"></span></h1>

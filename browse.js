@@ -169,7 +169,14 @@ function saveView(view, all = false) {
   localStorage.setItem(VIEW_KEY, JSON.stringify(browse.preferences));
   renderCards(); renderViewMenu();
 }
+function closeLibraryMenu() {
+  document.getElementById('library-tools').open = false;
+}
 function initBrowse() {
+  const toolsMenu = document.getElementById('library-tools');
+  toolsMenu.addEventListener('focusout', e => {
+    if (e.relatedTarget && !toolsMenu.contains(e.relatedTarget)) closeLibraryMenu();
+  });
   const input = document.getElementById('search-input');
   input.addEventListener('focus', openSearchMenu);
   input.addEventListener('click', () => { if (!browse.open) openSearchMenu(); });
@@ -212,12 +219,14 @@ function initBrowse() {
     }
   });
   document.addEventListener('click', e => {
+    if (!e.target.closest('.library-tools')) closeLibraryMenu();
     if (!e.target.closest('.search-wrap')) closeSearchMenu();
     if (!e.target.closest('.view-wrap')) closeViewMenu();
     const tag = e.target.closest('[data-filter-tag]'); if (tag) setTag(tag.dataset.filterTag);
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (toolsMenu.open) { closeLibraryMenu(); toolsMenu.querySelector('summary').focus(); }
       if (!document.getElementById('view-menu').hidden) { closeViewMenu(); document.getElementById('view-button').focus(); }
       closeSearchMenu();
     }
