@@ -45,8 +45,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .sidebar-item.drag-over{background:#e8f0fe;border:1.5px dashed #1a56db}
 .sidebar-item.col-drag-above{border-top:2px solid #1a56db}
 .sidebar-item.col-drag-below{border-bottom:2px solid #1a56db}
-.card{cursor:grab}.card:active{cursor:grabbing;opacity:0.7}
-.card.card-drag-over{outline:2px solid #1a56db;outline-offset:2px}
+.card{cursor:grab}.card.is-dragging{opacity:0.4;cursor:grabbing}
+.card-drop-indicator{position:fixed;background:#1a56db;border-radius:99px;pointer-events:none;z-index:90}
 .sidebar-spacer{flex:1}
 .sidebar-bottom{padding:8px 12px;border-top:0.5px solid rgba(0,0,0,0.08);margin-top:8px}
 
@@ -71,8 +71,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
 .card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;overflow:hidden;position:relative;transition:border-color 0.15s}
 .card:hover{border-color:rgba(0,0,0,0.25)}
-.card-actions{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s}
-.card:hover .card-actions{opacity:1}
+.card-actions{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s;z-index:1}
+.card:hover .card-actions,.card:focus-within .card-actions{opacity:1}
+.card-drag-handle{position:absolute;top:6px;left:6px;z-index:1;width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:#fff;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;font-size:18px;color:#888;cursor:grab}
 .card-action-btn{width:28px;height:28px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
 .card-action-btn:hover{background:#f0f0ee}
 .card-action-btn.danger:hover{background:#fff0f0}
@@ -81,15 +82,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .home-section{margin-bottom:28px}
 .home-section-title{font-size:12px;font-weight:500;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.06em}
 .home-section-title .count{font-size:11px;color:#bbb;font-weight:normal}
-.card-thumb{height:110px;background:#f5f5f3;display:flex;align-items:center;justify-content:center;font-size:32px}
+.card-thumb{height:110px;background:#f5f5f3;display:flex;align-items:center;justify-content:center;font-size:32px;color:inherit;text-decoration:none;cursor:pointer}
+.card-thumb:hover{filter:brightness(0.96)}
+.card-thumb:focus-visible{outline:2px solid #1a56db;outline-offset:-3px}
+.card-thumb img{pointer-events:none}
 .card-body{padding:10px}
 .card-title{font-size:13px;font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-url{font-size:11px;color:#aaa;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .tag{font-size:11px;padding:2px 7px;border-radius:99px;background:#e8f0fe;color:#1a56db;cursor:pointer}
 .tag:hover{background:#d0e2fd}
-.card-open-link{display:block;margin-top:10px;padding:7px 0;background:#f5f5f3;border-radius:8px;text-align:center;font-size:12px;font-weight:500;color:#1a1a1a;text-decoration:none;transition:background 0.1s}
-.card-open-link:hover{background:#e8e8e6}
 
 /* Status bar */
 .status-bar{background:#f5f5f3;border-top:0.5px solid rgba(0,0,0,0.08);padding:8px 16px;display:flex;align-items:center;gap:8px;font-size:12px;color:#888}
@@ -375,7 +377,7 @@ function setStatus(text, mode) {
   dot.className = 'status-dot' + (mode ? ' ' + mode : '');
 }
 
-// ========== ローカルキャッシュ（オフライン時の表示用） ==========
+// ========== ローカルデータの控え（接続待ちの表示・保存失敗時の退避用） ==========
 function saveCache() {
   localStorage.setItem(CACHE_KEY, JSON.stringify({
     bookmarks: state.bookmarks,
@@ -409,7 +411,7 @@ async function saveToFirestore() {
     document.getElementById('last-saved').textContent = new Date().toLocaleTimeString('ja-JP');
     setStatus('クラウドに同期済み ☁️', 'synced');
   } catch(e) {
-    setStatus('保存エラー — ローカルに保存しました', 'error');
+    setStatus('クラウド保存に失敗 — この端末に控えを保存しました', 'error');
     saveCache();
   }
 }
@@ -446,7 +448,7 @@ function startSync() {
       saveToFirestore();
     }
   }, err => {
-    setStatus('オフライン — ローカルデータを表示中', 'error');
+    setStatus('クラウド接続エラー — この端末の控えを表示中', 'error');
     loadCache();
     renderSidebar();
     renderCards();
@@ -545,10 +547,33 @@ function setCollection(id) {
 }
 
 // ========== ドラッグ＆ドロップ ==========
+let draggingBookmarkId = null;
+let dragSourceGrid = null;
+let cardDropIndicator = null;
+
+function clearCardDropIndicator() {
+  if (cardDropIndicator) cardDropIndicator.remove();
+  cardDropIndicator = null;
+}
+
+function cardDragEnd() {
+  clearCardDropIndicator();
+  document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
+  draggingBookmarkId = null;
+  dragSourceGrid = null;
+}
+
 function dragStart(event, bookmarkId) {
+  draggingBookmarkId = bookmarkId;
+  dragSourceGrid = event.currentTarget.closest('.grid');
   event.dataTransfer.setData('bookmarkId', String(bookmarkId));
   event.dataTransfer.setData('type', 'bookmark');
   event.dataTransfer.effectAllowed = 'move';
+  requestAnimationFrame(() => {
+    if (draggingBookmarkId === bookmarkId) {
+      dragSourceGrid?.querySelector(`[data-bookmark-id="${bookmarkId}"]`)?.classList.add('is-dragging');
+    }
+  });
 }
 
 async function dropToCollection(event, collectionId) {
@@ -563,30 +588,89 @@ async function dropToCollection(event, collectionId) {
   await saveToFirestore();
 }
 
-// カード並び替え
-function cardDragOver(event, targetId) {
-  if (event.dataTransfer.getData('type') === 'col') return;
-  event.preventDefault();
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('card-drag-over'));
-  event.currentTarget.classList.add('card-drag-over');
+// グリッドの隙間も含め、ポインターに最も近いカードの前後を挿入先にする。
+function getCardDropPosition(grid, x, y) {
+  const cards = [...grid.querySelectorAll(':scope > .card')];
+  if (!cards.length) return null;
+  const entries = cards.map(card => ({ card, rect: card.getBoundingClientRect() }));
+  const distance = (value, start, end) => Math.max(start - value, 0, value - end);
+  entries.sort((a, b) =>
+    distance(y, a.rect.top, a.rect.bottom) - distance(y, b.rect.top, b.rect.bottom) ||
+    distance(x, a.rect.left, a.rect.right) - distance(x, b.rect.left, b.rect.right));
+  const { card, rect } = entries[0];
+  const singleColumn = entries.every(entry => Math.abs(entry.rect.left - rect.left) < 1);
+  const before = singleColumn ? y < rect.top + rect.height / 2 : x < rect.left + rect.width / 2;
+  const style = getComputedStyle(grid);
+  const gap = parseFloat(singleColumn ? style.rowGap : style.columnGap) || 12;
+  return {
+    targetId: Number(card.dataset.bookmarkId), before,
+    left: singleColumn ? rect.left : (before ? rect.left - gap / 2 : rect.right + gap / 2) - 1.5,
+    top: singleColumn ? (before ? rect.top - gap / 2 : rect.bottom + gap / 2) - 1.5 : rect.top,
+    width: singleColumn ? rect.width : 3,
+    height: singleColumn ? 3 : rect.height,
+  };
 }
 
-async function cardDrop(event, targetId) {
+function cardDragOver(event) {
+  const grid = event.target.closest('.grid');
+  if (draggingBookmarkId === null || grid !== dragSourceGrid) {
+    clearCardDropIndicator();
+    return;
+  }
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  const position = getCardDropPosition(grid, event.clientX, event.clientY);
+  if (!position || position.targetId === draggingBookmarkId) {
+    clearCardDropIndicator();
+    return;
+  }
+  if (!cardDropIndicator) {
+    cardDropIndicator = document.createElement('div');
+    cardDropIndicator.className = 'card-drop-indicator';
+    cardDropIndicator.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cardDropIndicator);
+  }
+  for (const key of ['left', 'top', 'width', 'height']) cardDropIndicator.style[key] = position[key] + 'px';
+}
+
+function moveBookmark(items, fromId, targetId, before) {
+  if (fromId === targetId || !items.some(b => b.id === fromId) || !items.some(b => b.id === targetId)) return false;
+  const fromIndex = items.findIndex(b => b.id === fromId);
+  const [moved] = items.splice(fromIndex, 1);
+  const targetIndex = items.findIndex(b => b.id === targetId);
+  const insertIndex = targetIndex + (before ? 0 : 1);
+  items.splice(insertIndex, 0, moved);
+  return fromIndex !== insertIndex;
+}
+
+async function cardDrop(event) {
+  const grid = event.target.closest('.grid');
+  if (draggingBookmarkId === null || grid !== dragSourceGrid) { cardDragEnd(); return; }
   event.preventDefault();
   event.stopPropagation();
-  if (event.dataTransfer.getData('type') === 'col') return;
-  const fromId = Number(event.dataTransfer.getData('bookmarkId'));
-  if (!fromId || fromId === targetId) { document.querySelectorAll('.card').forEach(c => c.classList.remove('card-drag-over')); return; }
-  const fromIdx = state.bookmarks.findIndex(b => b.id === fromId);
-  const toIdx   = state.bookmarks.findIndex(b => b.id === targetId);
-  if (fromIdx === -1 || toIdx === -1) return;
-  const [moved] = state.bookmarks.splice(fromIdx, 1);
-  state.bookmarks.splice(toIdx, 0, moved);
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('card-drag-over'));
+  const position = getCardDropPosition(grid, event.clientX, event.clientY);
+  const fromId = draggingBookmarkId;
+  cardDragEnd();
+  if (!position) return;
+  const orderKey = grid.dataset.orderKey;
+  if (orderKey === 'quickAccessOrder' || orderKey === 'recentOrder') {
+    const items = [...grid.querySelectorAll(':scope > .card')]
+      .map(card => state.bookmarks.find(b => b.id === Number(card.dataset.bookmarkId))).filter(Boolean);
+    if (!moveBookmark(items, fromId, position.targetId, position.before)) return;
+    items.forEach((b, index) => { b[orderKey] = index; });
+  } else if (!moveBookmark(state.bookmarks, fromId, position.targetId, position.before)) return;
   renderSidebar();
   renderCards();
   await saveToFirestore();
 }
+
+document.addEventListener('dragover', cardDragOver);
+document.addEventListener('drop', cardDrop);
+document.addEventListener('dragend', cardDragEnd);
+document.addEventListener('dragleave', event => {
+  if (!event.relatedTarget || !dragSourceGrid?.contains(event.relatedTarget)) clearCardDropIndicator();
+});
+document.addEventListener('scroll', clearCardDropIndicator, true);
 
 // コレクション並び替え
 let colDraggingId = null;
@@ -643,27 +727,26 @@ function setTag(t) {
 
 function cardHTML(b) {
   return `
-    <div class="card" draggable="true"
-      ondragstart="dragStart(event, ${b.id})"
-      ondragover="cardDragOver(event, ${b.id})"
-      ondragleave="this.classList.remove('card-drag-over')"
-      ondrop="cardDrop(event, ${b.id})">
+    <div class="card" draggable="true" data-bookmark-id="${b.id}"
+      ondragstart="dragStart(event, ${b.id})">
+      <span class="card-drag-handle" title="ドラッグしてカードの間に移動" aria-hidden="true">⠿</span>
       <div class="card-actions">
         <button class="card-action-btn${b.pinned ? ' pinned' : ''}" onclick="togglePin(${b.id})" title="${b.pinned ? 'ピン留めを解除' : 'ピン留め'}">📌</button>
         <button class="card-action-btn" onclick="openEdit(${b.id})" title="編集">✏️</button>
         <button class="card-action-btn danger" onclick="deleteBookmark(${b.id})" title="削除">🗑</button>
       </div>
-      <div class="card-thumb">${b.thumb && b.thumb.startsWith('http')
+      <a class="card-thumb" href="${tagEsc(b.url)}" target="_blank" rel="noopener" draggable="false"
+        aria-label="${tagEsc(b.title)}（新しいタブで開く）" title="${tagEsc(b.title)}を開く ↗"
+        onclick="recordOpen(${b.id})">${b.thumb && b.thumb.startsWith('http')
         ? b.thumb.includes('google.com/s2/favicons')
           ? `<img src="${b.thumb}" alt="" style="width:48px;height:48px;object-fit:contain" onerror="retryThumb(${b.id},this)">`
           : `<img src="${b.thumb}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="retryThumb(${b.id},this)">`
         : `<span style="font-size:32px">${b.thumb || '🌐'}</span>`
-      }</div>
+      }</a>
       <div class="card-body">
         <div class="card-title" title="${b.title}">${b.title}</div>
         <div class="card-url">${b.url.replace(/^https?:\/\//, '').split('/')[0]}</div>
         <div class="tags">${(b.tags || []).map(t => `<span class="tag" onclick="setTag('${t}')">${t}</span>`).join('')}</div>
-        <a class="card-open-link" href="${b.url}" target="_blank" rel="noopener" onclick="recordOpen(${b.id})">開く ↗</a>
       </div>
       ${b.summary ? `<div class="card-summary">${b.summary}</div>` : ''}
     </div>
@@ -691,25 +774,28 @@ function renderCards() {
       .filter(b => !b.pinned && scoreOf(b) >= QUICK_ACCESS_MIN_SCORE)
       .sort((a, b) => scoreOf(b) - scoreOf(a));
     const quickAccess = [...pinned, ...byScore].slice(0, 12);
+    const byManualOrder = key => (a, b) => (a[key] ?? Number.MAX_SAFE_INTEGER) - (b[key] ?? Number.MAX_SAFE_INTEGER);
+    quickAccess.sort(byManualOrder('quickAccessOrder'));
 
     // 「最近使った」はクイックアクセスに出ていないものだけ
     const qaIds = new Set(quickAccess.map(b => b.id));
     const recent = state.bookmarks
       .filter(b => b.lastUsedAt && !qaIds.has(b.id))
       .sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0))
-      .slice(0, 12);
+      .slice(0, 12)
+      .sort(byManualOrder('recentOrder'));
 
     let html = '';
     if (quickAccess.length) {
       html += `<div class="home-section">
         <div class="home-section-title">📌 クイックアクセス <span class="count">${quickAccess.length}</span></div>
-        <div class="grid">${quickAccess.map(cardHTML).join('')}</div>
+        <div class="grid" data-order-key="quickAccessOrder">${quickAccess.map(cardHTML).join('')}</div>
       </div>`;
     }
     if (recent.length) {
       html += `<div class="home-section">
         <div class="home-section-title">🕒 最近使った項目 <span class="count">${recent.length}</span></div>
-        <div class="grid">${recent.map(cardHTML).join('')}</div>
+        <div class="grid" data-order-key="recentOrder">${recent.map(cardHTML).join('')}</div>
       </div>`;
     }
     if (!html) {
@@ -739,8 +825,11 @@ function recordOpen(id) {
   b.lastUsedAt = Date.now();
   // ローカルキャッシュに即保存（ページ更新で失わないように）
   saveCache();
-  // ホーム画面を即座に反映
-  if (state.activeCollection === '__home__') renderCards();
+  // リンクの標準動作が完了する前に要素を消すと、新しいタブが開かないことがある。
+  // 再描画はクリック処理の完了後に行う。
+  if (state.activeCollection === '__home__') {
+    setTimeout(() => { if (state.activeCollection === '__home__') renderCards(); }, 0);
+  }
   // Firestoreにも即保存
   saveToFirestore();
 }
@@ -1532,7 +1621,7 @@ function dismissInstall() {
   document.getElementById('install-banner').style.display = 'none';
 }
 
-// ========== Service Worker 登録 ==========
+// ========== Service Worker 登録（旧キャッシュの削除用・オフライン起動なし） ==========
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

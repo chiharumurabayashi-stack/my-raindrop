@@ -29,7 +29,7 @@
 | 背景（アプリ） | `#f5f5f3` | body、コンテンツエリア、入力背景 |
 | 背景（パネル） | `#fff` | サイドバー、カード、モーダル、トップバー |
 | ホバー背景 | `#f0f0ee` | ボタン・リストアイテムのhover |
-| ホバー背景（濃） | `#e8e8e6` | 「開く」リンクのhover |
+| ホバー背景（濃） | `#e8e8e6` | 強調したホバー背景 |
 
 ### アクセントカラー（青）
 
@@ -169,11 +169,14 @@ border: 0.5px solid rgba(0,0,0,0.1)
 border-radius: 12px
 hover → border-color: rgba(0,0,0,0.25)
 
-- サムネイル高さ: 110px / background: #f5f5f3
+- サムネイル高さ: 110px / background: #f5f5f3 / クリックで新しいタブにページを開く
+- サムネイルリンク: hover時 brightness(0.96)、キーボードfocus時 青いoutline
 - タイトル: 13px / font-weight:500 / 1行省略
 - URL: 11px / color:#aaa / 1行省略
-- 「開く」ボタン: padding 7px 0 / background #f5f5f3 / border-radius 8px
-- アクションボタン: hover時のみ表示 (opacity 0→1)
+- 「開く」ボタンは置かない。画像なしの絵文字サムネイルもリンクにする
+- 左上のドラッグつまみ: 28px / 白背景 / 0.5pxボーダー / 角丸8px
+- 挿入位置: カード間の青い3px線（背景色で描画）。ドラッグ中のカードは opacity:0.4
+- アクションボタン: hover・カード内focus時に表示 (opacity 0→1)
 - AI要約: 11px / color:#777 / 最大3行
 ```
 
