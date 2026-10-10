@@ -385,7 +385,7 @@ function setStatus(text, mode) {
   dot.className = 'status-dot' + (mode ? ' ' + mode : '');
 }
 
-// ========== ローカルデータの控え（接続待ちの表示・保存失敗時の退避用） ==========
+// ========== 旧版の個人データキャッシュを除去（表示設定だけ保持） ==========
 function saveCache() { localStorage.removeItem(CACHE_KEY); }
 function loadCache() {
   saveCache();
@@ -427,7 +427,7 @@ function startSync(onReady, onDenied) {
   const epoch = authEpoch;
   setStatus('接続中...', '');
 
-  // まずキャッシュを表示（体感速度向上）
+  // 表示設定を復元。個人データは認証後にサーバーから取得する。
   loadCache();
   renderSidebar();
   renderCards();
@@ -1562,6 +1562,8 @@ initOwnerAuth({
     document.getElementById('collection-list').innerHTML = '';
     document.getElementById('tag-list').innerHTML = '';
     document.getElementById('library-nav').innerHTML = '';
+    ['search-menu','view-menu','filter-chips'].forEach(id => document.getElementById(id).innerHTML = '');
+    document.querySelectorAll('.modal-bg input,.modal-bg textarea').forEach(el => el.value = '');
     document.querySelectorAll('.modal-bg').forEach(el => el.style.display = 'none');
     saveCache();
   }

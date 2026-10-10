@@ -42,3 +42,38 @@ test('extension never issues a database request without a token', async () => {
   await assert.rejects(ctx.privateFetch('https://example.com'));assert.equal(requests,0);
   allowed=true;await ctx.privateFetch('https://example.com');assert.equal(requests,1);assert.equal(options.headers.Authorization,'Bearer test-token');
 });
+function backgroundHarness() {
+  const storage={}; let external,internal; let lookups=0;
+  const runtime={id:'a'.repeat(32),getURL:path=>'chrome-extension://'+'a'.repeat(32)+'/'+path,
+    onMessageExternal:{addListener(fn){external=fn;}},onMessage:{addListener(fn){internal=fn;}}};
+  const ctx=vm.createContext({BookmarkAuth:{config},BookmarkAuthPolicy:{acceptsReply},importScripts(){},URLSearchParams,
+    crypto:{randomUUID:()=> 'test-nonce'}, chrome:{runtime,storage:{session:{
+      async get(key){return {[key]:storage[key]};},async set(value){Object.assign(storage,value);},async remove(keys){for(const key of [keys].flat())delete storage[key];}
+    }},tabs:{async create(){return {id:42};}}},
+    fetch:async(url,options)=>{lookups++;const accepted=JSON.parse(options.body).idToken==='owner-token';return {ok:accepted,json:async()=>({users:[{email:config.ownerEmail,emailVerified:true,localId:'owner',providerUserInfo:[{providerId:'google.com'}]}]})};}
+  });
+  vm.runInContext(fs.readFileSync('extension/background.js','utf8'),ctx);
+  return {storage,runtime,get lookups(){return lookups;},external:(message,sender)=>new Promise(resolve=>external(message,sender,resolve)),internal:(message,sender)=>new Promise(resolve=>{if(internal(message,sender,resolve)===false)resolve(false);})};
+}
+test('extension validates login with Firebase before keeping credentials; challenges cannot be replayed', async()=>{
+  const h=backgroundHarness();
+  const sender={url:config.appURL+'extension-login.html',tab:{id:42},frameId:0};
+  const pending={nonce:'test',tabId:42,createdAt:Date.now()};
+  const message={type:'owner-login',nonce:'test',idToken:'not-an-owner-token',refreshToken:'refresh'};
+  h.storage.pendingLogin=pending;
+  assert.equal((await h.external(message,sender)).ok,false);
+  assert.equal(h.storage.ownerSession,undefined);
+  h.storage.pendingLogin=pending;message.idToken='owner-token';
+  assert.equal((await h.external(message,sender)).ok,true);
+  assert.equal(h.storage.ownerSession.idToken,'owner-token');
+  const calls=h.lookups;
+  assert.equal((await h.external(message,sender)).ok,false);assert.equal(h.lookups,calls);
+});
+test('only the extension popup can request tokens and logout removes the session', async()=>{
+  const h=backgroundHarness();h.storage.ownerSession={idToken:'owner-token',expiresAt:Date.now()+3600000};
+  const popup={id:h.runtime.id,url:h.runtime.getURL('popup.html')};
+  assert.equal(await h.internal({type:'auth:token'},{...popup,url:config.appURL}),false);
+  assert.equal((await h.internal({type:'auth:token'},popup)).token,'owner-token');
+  await h.internal({type:'auth:logout'},popup);
+  assert.equal((await h.internal({type:'auth:token'},popup)).ok,false);assert.equal(h.storage.ownerSession,undefined);
+});
