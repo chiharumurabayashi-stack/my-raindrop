@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex"><title>拡張機能にログイン</title>
+<style>body{font-family:system-ui,sans-serif;color:#222;background:#e8e9ec;margin:0;padding:24px}main{max-width:440px;margin:15vh auto;background:white;padding:32px;border:1px solid #d3d5da;border-radius:16px}h1{font-size:22px}p{line-height:1.8}button{font:inherit;background:#222;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer}button:disabled{opacity:.5}</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="extension/auth-config.js"></script>
+<script src="extension-login.js" defer></script></head><body><main>
+<h1>拡張機能にログイン</h1><p id="message" role="status">登録したGoogleアカウントでログインしてください。</p>
+<button id="login">Googleでログイン</button></main></body></html>

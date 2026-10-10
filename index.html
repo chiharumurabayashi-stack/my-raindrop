@@ -18,11 +18,15 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="extension/auth-config.js"></script>
+<script src="web-auth.js"></script>
 <script src="extension/classification.js?v=20261009-title-cleanup"></script>
 <script src="library.js?v=20261009-browse"></script>
 <script src="browse.js?v=20261009-library-menu"></script>
 
 <style>
+[hidden] { display:none!important; }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a;background:#e8e9ec}
 .app{display:flex;height:100vh;background:#e8e9ec}
@@ -179,7 +183,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 </div>
 
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
-<div class="app">
+<section id="auth-gate" style="max-width:420px;margin:15vh auto;padding:32px;background:#fff;border:1px solid #d3d5da;border-radius:16px;text-align:center">
+  <h1 style="font-size:22px;margin-bottom:16px">ブックマークにログイン</h1>
+  <p id="auth-message" role="status" style="line-height:1.7;margin-bottom:24px">ログイン状態を確認しています…</p>
+  <button id="auth-login" class="btn btn-primary">Googleでログイン</button>
+</section>
+<div class="app" id="application" hidden>
   <div class="sidebar" id="sidebar">
     <div class="sidebar-scroll">
       <div id="library-nav" aria-label="ライブラリ"></div>
@@ -221,6 +230,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
         <summary aria-label="設定とデータ管理" title="設定とデータ管理">⋯</summary>
         <div class="library-tools-menu">
           <button type="button" onclick="closeLibraryMenu();openSettings()">設定</button>
+          <hr>
+          <button type="button" id="auth-logout">ログアウト</button>
           <hr>
           <div class="menu-label">データのバックアップ・復元</div>
           <button type="button" onclick="closeLibraryMenu();exportJSON()">JSONエクスポート</button>
@@ -343,15 +354,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 
 <script>
 // ========== Firebase 初期化 ==========
-const firebaseConfig = {
-  apiKey: "AIzaSyBGcuc2uwBpFWGs31Duj4jIZRdA3Nxg_2Y",
-  authDomain: "my-raindrop.firebaseapp.com",
-  projectId: "my-raindrop",
-  storageBucket: "my-raindrop.firebasestorage.app",
-  messagingSenderId: "389386045279",
-  appId: "1:389386045279:web:947ede469e10b1f2f198ea",
-  measurementId: "G-WXCKSPFTJ7"
-};
+const firebaseConfig = BookmarkAuth.config.firebase;
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const docRef = db.collection('myraindrop').doc('data');
@@ -383,22 +386,9 @@ function setStatus(text, mode) {
 }
 
 // ========== ローカルデータの控え（接続待ちの表示・保存失敗時の退避用） ==========
-function saveCache() {
-  localStorage.setItem(CACHE_KEY, JSON.stringify({
-    bookmarks: state.bookmarks,
-    collections: state.collections,
-  }));
-}
-
+function saveCache() { localStorage.removeItem(CACHE_KEY); }
 function loadCache() {
-  try {
-    const c = localStorage.getItem(CACHE_KEY);
-    if (c) {
-      const d = JSON.parse(c);
-      if (d.bookmarks) state.bookmarks = d.bookmarks;
-      if (d.collections) state.collections = d.collections;
-    }
-  } catch(e) {}
+  saveCache();
   state.activeCollection = localStorage.getItem('active_collection') || 'all';
   if (state.activeCollection === '__home__') state.activeCollection = 'all';
   try {
@@ -408,7 +398,12 @@ function loadCache() {
 }
 
 // ========== Firestore 保存 ==========
+let authEpoch = 0;
+let libraryReady = false;
+function ownerReady() { return libraryReady && BookmarkAuth.isOwner(firebase.auth().currentUser); }
 async function saveToFirestore() {
+  if (!ownerReady()) throw new Error('ログインが必要です');
+  const epoch = authEpoch;
   setStatus('保存中...', 'syncing');
   try {
     await docRef.set({
@@ -416,17 +411,20 @@ async function saveToFirestore() {
       collections: state.collections,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
+    if (epoch !== authEpoch) return;
     saveCache();
     document.getElementById('last-saved').textContent = new Date().toLocaleTimeString('ja-JP');
     setStatus('クラウドに同期済み ☁️', 'synced');
   } catch(e) {
-    setStatus('クラウド保存に失敗 — この端末に控えを保存しました', 'error');
-    saveCache();
+    if (epoch !== authEpoch) return;
+    setStatus('保存できませんでした。接続とログインを確認してください', 'error');
+    throw e;
   }
 }
 
 // ========== Firestore リアルタイム同期 ==========
-function startSync() {
+function startSync(onReady, onDenied) {
+  const epoch = authEpoch;
   setStatus('接続中...', '');
 
   // まずキャッシュを表示（体感速度向上）
@@ -434,7 +432,9 @@ function startSync() {
   renderSidebar();
   renderCards();
 
-  docRef.onSnapshot(snapshot => {
+  return docRef.onSnapshot(snapshot => {
+    if (epoch !== authEpoch || !BookmarkAuth.isOwner(firebase.auth().currentUser)) return;
+    libraryReady = true;
     if (snapshot.exists) {
       const data = snapshot.data();
       state.bookmarks = data.bookmarks || [];
@@ -451,22 +451,17 @@ function startSync() {
       document.getElementById('last-saved').textContent =
         data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleTimeString('ja-JP') : '';
       setStatus('クラウドに同期済み ☁️', 'synced');
-      fetchMissingThumbs();
+      onReady();
     } else {
-      // 初回：サンプルデータを書き込む
-      state.bookmarks = [
-        { id: 1, url: 'https://anthropic.com', title: 'Anthropic', collection: 'Tech', tags: ['AI', 'tool'], thumb: '🤖' },
-        { id: 2, url: 'https://figma.com', title: 'Figma', collection: 'Design', tags: ['design', 'tool'], thumb: '🎨' },
-        { id: 3, url: 'https://github.com', title: 'GitHub', collection: 'Tech', tags: ['code', 'dev'], thumb: '💻' },
-        { id: 4, url: 'https://zenn.dev', title: 'Zenn', collection: '読み物', tags: ['tech', 'blog'], thumb: '📰' },
-      ];
-      saveToFirestore();
+      state.bookmarks = [];
+      state.collections = [{id:'all',name:'すべて',icon:'📌'}];
+      renderSidebar(); renderCards(); onReady();
     }
   }, err => {
-    setStatus('クラウド接続エラー — この端末の控えを表示中', 'error');
-    loadCache();
-    renderSidebar();
-    renderCards();
+    if (epoch !== authEpoch) return;
+    libraryReady = false;
+    if (err.code === 'permission-denied' || err.code === 'unauthenticated') onDenied();
+    else setStatus('クラウドに接続できません。接続を確認してください', 'error');
   });
 }
 
@@ -1557,7 +1552,20 @@ if ('serviceWorker' in navigator) {
 
 // ========== 起動 ==========
 initBrowse();
-startSync();
+saveCache();
+initOwnerAuth({
+  onUnlock: startSync,
+  onLock() {
+    authEpoch++; libraryReady = false;
+    state.bookmarks = []; state.collections = []; state.activeTags = [];
+    document.getElementById('card-grid').innerHTML = '';
+    document.getElementById('collection-list').innerHTML = '';
+    document.getElementById('tag-list').innerHTML = '';
+    document.getElementById('library-nav').innerHTML = '';
+    document.querySelectorAll('.modal-bg').forEach(el => el.style.display = 'none');
+    saveCache();
+  }
+});
 initSections();
 document.getElementById('hamburger-btn').addEventListener('click', openSidebar);
 document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);

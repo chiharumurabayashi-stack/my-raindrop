@@ -21,12 +21,15 @@ const previewDoc = {
   set: async data => { localStorage.setItem(previewKey, JSON.stringify({...data, updatedAt:null})); },
   onSnapshot: callback => callback({exists:true, data:()=>previewData})
 };
-const firebase = {initializeApp(){}, firestore:()=>({collection:()=>({doc:()=>previewDoc})})};
+const previewAuth = {currentUser:null, onAuthStateChanged(callback){this.callback=callback;queueMicrotask(()=>callback(this.currentUser));}, async setPersistence(){}, async signInWithPopup(){this.currentUser={email:'chiharu.murabayashi@gmail.com',emailVerified:true,providerData:[{providerId:'google.com'}]};this.callback(this.currentUser);},async signOut(){this.currentUser=null;this.callback(null);}};
+const firebase = {auth:()=>previewAuth,initializeApp(){}, firestore:()=>({collection:()=>({doc:()=>previewDoc})})};
+firebase.auth.Auth={Persistence:{SESSION:'session'}};
+firebase.auth.GoogleAuthProvider=class {setCustomParameters(){}};
 firebase.firestore.FieldValue = {serverTimestamp:()=>null};
 </script>`;
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1:4179');
-  if (['/extension/classification.js','/library.js','/browse.js','/browse.css'].includes(url.pathname)) {
+  if (['/extension/classification.js','/extension/auth-config.js','/web-auth.js','/library.js','/browse.js','/browse.css'].includes(url.pathname)) {
     res.setHeader('Content-Type', url.pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
     return res.end(fs.readFileSync(path.join(__dirname, '..', url.pathname.slice(1))));

@@ -100,7 +100,7 @@ for (const target of ['web','extension']) {
     element('f-url').value='https://example.com';element('f-title').value='Example';element('f-col').value='daily';
     let appliedTags;
     const ctx=vm.createContext({
-      BookmarkClassification:taxonomy, state:{collections,bookmarks}, collections,bookmarks,
+      authorized:true, BookmarkClassification:taxonomy, state:{collections,bookmarks}, collections,bookmarks,
       document:{getElementById:element},localStorage:{getItem:()=> 'test-key'},
       chrome:{storage:{local:{get:async()=>({geminiKey:'test-key'})}},tabs:{query:async()=>[{id:1}]},scripting:{executeScript:async()=>[{result:'Test page'}]}},
       fetch:async url=>url.includes('generateContent')?{ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({title:'Example：資料',collection:'AI画像',tags:['news','新規タグ','tool'],summary:'要約'})}]}}]})}:{ok:false},

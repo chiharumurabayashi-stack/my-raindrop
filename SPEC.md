@@ -73,7 +73,7 @@ my-raindrop/
 ├── README.md             現行オンライン版のユーザーガイド
 ├── DESIGN.md             デザインルール
 ├── my-raindrop.html      旧ローカル保存版の参考ファイル（現行版では使用しない）
-├── my-raindrop-bookmarks.json  ブックマークデータのバックアップ（JSON エクスポート形式）
+├── firestore.rules        本人のGoogleアカウント専用のデータアクセス制限
 └── extension/
     ├── manifest.json     拡張機能マニフェスト（Manifest V3）
     ├── popup.html        拡張機能ポップアップ UI
@@ -182,7 +182,7 @@ onSnapshot で全デバイスに自動配信
 ### 使用 API
 
 - **Firestore REST API**: `https://firestore.googleapis.com/v1/projects/my-raindrop/databases/(default)/documents/myraindrop/data`
-- 認証: 不要（セキュリティルールで public read/write を許可中）
+- 認証: Firebase Googleログイン。Bearer ID tokenを付け、サーバーで所有者メール・確認済みメール・Googleプロバイダを検証する。
 
 ### インストール方法
 
@@ -210,7 +210,7 @@ Chrome 拡張機能は Chrome Web Store には非公開のため、手動イン�
 
 ホーム画面から起動する場合もインターネット接続が必要。Service Worker は `fetch` を捕捉せず、HTML・静的ファイルはブラウザの通常のネットワーク読み込みに任せる。アプリ独自のキャッシュ配信やオフライン用フォールバックは行わない。
 
-旧バージョンを利用済みのブラウザへ変更を届けるため、`sw.js` の登録は維持する。更新された Service Worker が有効になる際に、`myraindrop-` で始まる Cache Storage のみ削除する。他のアプリのキャッシュや、localStorage 内のブックマークの控え・設定は削除しない。
+旧バージョンを利用済みのブラウザへ変更を届けるため、`sw.js` の登録は維持する。更新された Service Worker が有効になる際に、`myraindrop-` で始まる Cache Storage のみ削除する。他のアプリのキャッシュや、localStorage 内の旧ブックマークの控えはWebアプリ起動時に削除する。表示設定は維持する。
 
 ---
 
@@ -223,14 +223,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /myraindrop/data {
-      allow read, write: if true;
+      allow read, write: if request.auth != null
+        && request.auth.token.email == 'chiharu.murabayashi@gmail.com'
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
   }
 }
 ```
 
-> **注意**: 現在は認証なしで誰でも読み書き可能。URL を知られると第三者が操作できる。  
-> 将来的には Firebase Authentication を導入し、`request.auth != null` に変更することを推奨。
+> 本人以外の読み書きはサーバーで拒否する。画面側のメール確認だけを認可に使わない。
 
 ### robots 設定
 

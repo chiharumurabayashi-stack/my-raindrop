@@ -91,10 +91,37 @@ let pendingSummary = '';
 let pendingCover = null;
 
 // ===== Firestore 読み込み =====
+let documentVersion = null;
+let authorized = false;
+async function authRequest(type) {
+  const result = await chrome.runtime.sendMessage({type});
+  if (!result?.ok) throw new Error(result?.error || 'ログインが必要です');
+  return result;
+}
+async function privateFetch(url, options = {}) {
+  const {token} = await authRequest('auth:token');
+  const response = await fetch(url, {...options, headers:{...options.headers, Authorization:'Bearer ' + token}});
+  if ([401,403].includes(response.status)) {
+    await authRequest('auth:logout');
+    lockPopup('Googleでログインし直してください。');
+    throw new Error('ログインが必要です');
+  }
+  return response;
+}
+function lockPopup(text) {
+  authorized = false; bookmarks = []; collections = []; selectedTags = [];
+  document.getElementById('private-content').hidden = true;
+  document.getElementById('auth-gate').hidden = false;
+  document.getElementById('auth-message').textContent = text;
+  document.getElementById('f-col').innerHTML = '';
+  document.getElementById('tag-dropdown').innerHTML = '';
+  document.getElementById('tag-chips').innerHTML = '';
+}
 async function loadData() {
-  const res = await fetch(DOC_URL);
+  const res = await privateFetch(DOC_URL);
   if (!res.ok) throw new Error('fetch failed');
   const json = await res.json();
+  documentVersion = json.updateTime;
   bookmarks   = fromFS((json.fields || {}).bookmarks)   || [];
   collections = fromFS((json.fields || {}).collections) || [];
 }
@@ -190,6 +217,7 @@ function hideDropdown() {
 
 // ===== AI 自動入力 =====
 async function aiFill() {
+  if (!authorized) return;
   const { geminiKey } = await chrome.storage.local.get('geminiKey');
   if (!geminiKey) {
     // 設定パネルを開いて知らせる
@@ -288,6 +316,7 @@ async function aiFill() {
 
 // ===== 保存 =====
 async function save() {
+  if (!authorized) return;
   const url   = document.getElementById('f-url').value.trim();
   const title = document.getElementById('f-title').value.trim() || url;
   let   col   = document.getElementById('f-col').value;
@@ -319,25 +348,36 @@ async function save() {
     const thumb = pendingCover || screenshotUrl(url) || faviconUrl(url);
     const bookmark = { id: Date.now(), url, title, collection: col, tags: BookmarkClassification.normalizeTags(selectedTags), thumb };
     if (pendingSummary) bookmark.summary = pendingSummary;
+    const selectedCollection = collections.find(c => c.id === col);
+    await loadData();
+    if (selectedCollection && !collections.some(c => c.id === col)) collections.push(selectedCollection);
     bookmarks.push(bookmark);
-    const res = await fetch(DOC_URL, {
+    const patchURL = DOC_URL + '&updateMask.fieldPaths=bookmarks&updateMask.fieldPaths=collections&currentDocument.updateTime=' + encodeURIComponent(documentVersion);
+    const res = await privateFetch(patchURL, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { bookmarks: toFS(bookmarks), collections: toFS(collections) } })
     });
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error(res.status === 409 || res.status === 400 ? 'ほかの端末で変更されました。もう一度保存してください。' : '保存に失敗しました');
     const st = document.getElementById('status');
     st.textContent = '✓ 保存しました'; st.className = 'status ok';
     setTimeout(() => window.close(), 900);
   } catch(e) {
     const st = document.getElementById('status');
-    st.textContent = '保存に失敗しました'; st.className = 'status err';
+    st.textContent = e.message || '保存に失敗しました'; st.className = 'status err';
     btn.disabled = false; btn.textContent = '保存';
   }
 }
 
 // ===== 起動 =====
 document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('auth-login').addEventListener('click', async () => {
+    try { await authRequest('auth:login'); window.close(); }
+    catch { lockPopup('ログインを開始できませんでした。拡張機能を再読み込みしてください。'); }
+  });
+  document.getElementById('auth-logout').addEventListener('click', async () => {
+    await authRequest('auth:logout'); location.reload();
+  });
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   document.getElementById('f-url').value   = tab.url   || '';
   document.getElementById('f-title').value = tab.title || '';
@@ -349,12 +389,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   st.textContent = '読み込み中...';
   try {
     await loadData();
+    authorized = true;
+    document.getElementById('private-content').hidden = false;
+    document.getElementById('auth-gate').hidden = true;
     buildCollectionSelect('');
     const exists = bookmarks.some(b => b.url === tab.url);
     document.getElementById('already-msg').style.display = exists ? 'block' : 'none';
     st.textContent = '';
   } catch(e) {
-    st.textContent = 'データ読み込み失敗'; st.className = 'status err';
+    lockPopup('登録したGoogleアカウントでログインしてください。');
   }
 
   // 設定パネルの開閉

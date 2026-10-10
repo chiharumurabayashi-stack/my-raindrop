@@ -33,3 +33,6 @@ build/
 
 # Private exports and one-time data maintenance (never publish)
 local-data/
+
+# Private bookmark exports must never be published
+my-raindrop-bookmarks*.json
