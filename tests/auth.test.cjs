@@ -22,17 +22,46 @@ test('extension login reply is tied to the exact origin, page, tab, nonce, frame
 test('web keeps private UI locked until owner data arrives, and removes it on logout/account change', async () => {
   const elements = new Map();
   const element = id => {if(!elements.has(id))elements.set(id,{hidden:false,addEventListener(type,fn){this[type]=fn;}});return elements.get(id);};
-  let observer, unlocks=0,locks=0,stops=0,ready;
-  const auth={currentUser:null,onAuthStateChanged(fn){observer=fn;},async signOut(){this.currentUser=null;}};
-  const ctx=vm.createContext({firebase:{auth:()=>auth},BookmarkAuth:{isOwner},document:{getElementById:element},location:{reload(){}}});
+  let observer, unlocks=0,locks=0,stops=0,ready,popups=0;
+  const persistence=[];
+  const auth={currentUser:null,onAuthStateChanged(fn){observer=fn;},async signOut(){this.currentUser=null;},
+    async setPersistence(mode){persistence.push(mode);},async signInWithPopup(){popups++;assert.equal(persistence.at(-1),'local');}};
+  const authFactory=()=>auth;
+  authFactory.Auth={Persistence:{LOCAL:'local'}};
+  authFactory.GoogleAuthProvider=class {setCustomParameters(){}};
+  const ctx=vm.createContext({firebase:{auth:authFactory},BookmarkAuth:{isOwner},document:{getElementById:element},location:{reload(){}}});
   vm.runInContext(fs.readFileSync('web-auth.js','utf8'),ctx);
   ctx.initOwnerAuth({onUnlock(callback){unlocks++;ready=callback;return()=>stops++;},onLock(){locks++;}});
   await observer(null); assert(element('application').hidden); assert.equal(unlocks,0);
   auth.currentUser={...owner,email:'other@gmail.com'};await observer(auth.currentUser);assert.equal(unlocks,0);assert(element('application').hidden);
   auth.currentUser=owner;await observer(owner);assert.equal(unlocks,1);assert(element('application').hidden);
+  assert.equal(persistence.at(-1),'local');assert.equal(popups,0);
+  assert(element('auth-login').hidden);assert.equal(element('auth-title').textContent,'読み込み中…');
   ready();assert.equal(element('application').hidden,false);
   auth.currentUser=null;await observer(null);assert(element('application').hidden);assert.equal(stops,1);
   ready();assert(element('application').hidden);assert(locks>=4);
+  assert.equal(element('auth-login').hidden,false);
+  await element('auth-login').click();assert.equal(popups,1);
+});
+test('logout while an existing session migrates cannot reopen private UI', async()=>{
+  const elements=new Map();
+  const element=id=>{if(!elements.has(id))elements.set(id,{hidden:false,addEventListener(){}});return elements.get(id);};
+  let observer,finishMigration,unlocks=0;
+  const auth={currentUser:owner,onAuthStateChanged(fn){observer=fn;},setPersistence:()=>new Promise(resolve=>finishMigration=resolve)};
+  const factory=()=>auth;factory.Auth={Persistence:{LOCAL:'local'}};
+  const ctx=vm.createContext({firebase:{auth:factory},BookmarkAuth:{isOwner},document:{getElementById:element}});
+  vm.runInContext(fs.readFileSync('web-auth.js','utf8'),ctx);
+  ctx.initOwnerAuth({onUnlock(){unlocks++;},onLock(){}});
+  const pending=observer(owner);auth.currentUser=null;await observer(null);finishMigration();await pending;
+  assert.equal(unlocks,0);assert(element('application').hidden);assert.equal(element('auth-login').hidden,false);
+});
+test('extension login uses a separate Firebase Auth instance from the remembered Web login',()=>{
+  let appName,authCalls=0;
+  const ctx=vm.createContext({BookmarkAuth:{config},firebase:{initializeApp(settings,name){appName=name;return {auth(){authCalls++;return {};}};}},
+    URLSearchParams,location:{hash:'',pathname:'/extension-login.html'},history:{replaceState(){}},window:{},
+    document:{getElementById(){return {addEventListener(){}};}}});
+  vm.runInContext(fs.readFileSync('extension-login.js','utf8'),ctx);
+  assert.equal(appName,'extension-login');assert.equal(authCalls,1);
 });
 test('extension never issues a database request without a token', async () => {
   const source=fs.readFileSync('extension/popup.js','utf8');

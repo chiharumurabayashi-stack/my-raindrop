@@ -23,7 +23,7 @@ const previewDoc = {
 };
 const previewAuth = {currentUser:null, onAuthStateChanged(callback){this.callback=callback;queueMicrotask(()=>callback(this.currentUser));}, async setPersistence(){}, async signInWithPopup(){this.currentUser={email:'chiharu.murabayashi@gmail.com',emailVerified:true,providerData:[{providerId:'google.com'}]};this.callback(this.currentUser);},async signOut(){this.currentUser=null;this.callback(null);}};
 const firebase = {auth:()=>previewAuth,initializeApp(){}, firestore:()=>({collection:()=>({doc:()=>previewDoc})})};
-firebase.auth.Auth={Persistence:{SESSION:'session'}};
+firebase.auth.Auth={Persistence:{LOCAL:'local'}};
 firebase.auth.GoogleAuthProvider=class {setCustomParameters(){}};
 firebase.firestore.FieldValue = {serverTimestamp:()=>null};
 </script>`;

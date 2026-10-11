@@ -5,20 +5,25 @@ function initOwnerAuth({ onUnlock, onLock }) {
   const app = document.getElementById('application');
   const message = document.getElementById('auth-message');
   const button = document.getElementById('auth-login');
+  const title = document.getElementById('auth-title');
   let unsubscribe = null;
-  function lock(text) {
+  let revision = 0;
+  function lock(text, canLogin = true) {
+    revision++;
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
     app.hidden = true;
     gate.hidden = false;
     onLock();
     message.textContent = text;
+    title.textContent = canLogin ? 'ブックマークにログイン' : '読み込み中…';
+    button.hidden = !canLogin;
     button.disabled = false;
   }
   button.addEventListener('click', async () => {
     button.disabled = true;
     try {
-      await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       await auth.signInWithPopup(provider);
@@ -35,15 +40,23 @@ function initOwnerAuth({ onUnlock, onLock }) {
     location.reload();
   });
   auth.onAuthStateChanged(async user => {
-    lock('登録したGoogleアカウントでログインしてください。');
-    if (!user) return;
-    if (!BookmarkAuth.isOwner(user)) {
-      await auth.signOut();
-      message.textContent = 'このアカウントは利用できません。登録したGoogleアカウントを選んでください。';
+    if (!user) {
+      lock('登録したGoogleアカウントでログインしてください。');
       return;
     }
+    lock('ブックマークを読み込んでいます…', false);
+    const currentRevision = revision;
+    if (!BookmarkAuth.isOwner(user)) {
+      await auth.signOut();
+      lock('このアカウントは利用できません。登録したGoogleアカウントを選んでください。');
+      return;
+    }
+    // Migrate an already signed-in SESSION user as well as new sign-ins.
+    try { await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }
+    catch { /* Keep the valid current session if browser storage is unavailable. */ }
+    if (currentRevision !== revision || !BookmarkAuth.isOwner(auth.currentUser)) return;
     unsubscribe = onUnlock(() => {
-      if (!BookmarkAuth.isOwner(auth.currentUser)) return;
+      if (currentRevision !== revision || !BookmarkAuth.isOwner(auth.currentUser)) return;
       gate.hidden = true;
       app.hidden = false;
     }, () => lock('データへのアクセスが拒否されました。登録したアカウントでログインし直してください。'));

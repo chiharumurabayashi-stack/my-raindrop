@@ -1,5 +1,7 @@
-firebase.initializeApp(BookmarkAuth.config.firebase);
-const auth = firebase.auth();
+// Separate Auth storage so the extension's temporary sign-in/sign-out never
+// clears the Web app's remembered login on this same origin.
+const loginApp = firebase.initializeApp(BookmarkAuth.config.firebase, 'extension-login');
+const auth = loginApp.auth();
 const params = new URLSearchParams(location.hash.slice(1));
 const extension = params.get('extension');
 const nonce = params.get('nonce');
