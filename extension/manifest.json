@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
   "name": "ブックマークマネージャー",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "現在のページをブックマークマネージャーに保存",
+  "icons": {
+    "16": "icons/star-16.png",
+    "32": "icons/star-32.png",
+    "48": "icons/star-48.png",
+    "128": "icons/star-128.png"
+  },
   "permissions": [
     "activeTab",
     "tabs",
@@ -16,6 +22,10 @@
     "https://securetoken.googleapis.com/*"
   ],
   "action": {
+    "default_icon": {
+      "16": "icons/star-16.png",
+      "32": "icons/star-32.png"
+    },
     "default_popup": "popup.html",
     "default_title": "ブックマークマネージャーに保存"
   },
