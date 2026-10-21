@@ -1,10 +1,10 @@
-# MyRaindrop ユーザーガイド
+# ブックマークマネージャー ユーザーガイド
 
-MyRaindrop は、Firebase Firestore でブックマークを同期するオンライン専用の管理アプリです。現行アプリの入口は `index.html` です。
+ブックマークマネージャー は、Firebase Firestore でブックマークを同期するオンライン専用の管理アプリです。現行アプリの入口は `index.html` です。
 
 ## はじめかた
 
-1. インターネットに接続して、[MyRaindrop](https://chiharumurabayashi-stack.github.io/my-raindrop/) を開きます。
+1. インターネットに接続して、[ブックマークマネージャー](https://chiharumurabayashi-stack.github.io/my-raindrop/) を開きます。
 2. 「Googleでログイン」から登録したGoogleアカウントでログインし、「クラウドに同期済み」を確認します。
 3. 「+ 追加」から URL・タイトル・コレクション・タグを入力して保存します。
 
@@ -62,7 +62,7 @@ AI入力補助は既存コレクションと既存タグを優先します。新
 
 拡張機能もオンライン接続が必要です。AI 入力補助の API キーは、Web アプリとは別に拡張機能側で設定します。
 
-フォルダ内の拡張機能を更新した後は、拡張機能管理画面で MyRaindrop の再読み込みボタンを押してください。Braveでは `brave://extensions/` から同じ操作ができます。
+フォルダ内の拡張機能を更新した後は、拡張機能管理画面で ブックマークマネージャー の再読み込みボタンを押してください。Braveでは `brave://extensions/` から同じ操作ができます。
 
 ## ファイルの役割
 

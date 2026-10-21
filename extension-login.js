@@ -10,7 +10,7 @@ const button = document.getElementById('login');
 const message = document.getElementById('message');
 if (!/^[a-p]{32}$/.test(extension || '') || !/^[0-9a-f-]{36}$/.test(nonce || '') || !window.chrome?.runtime?.sendMessage) {
   button.disabled = true;
-  message.textContent = 'ブラウザのMyRaindrop拡張機能からログインを開始してください。';
+  message.textContent = 'ブラウザのブックマークマネージャー拡張機能からログインを開始してください。';
 }
 button.addEventListener('click', async () => {
   button.disabled = true;

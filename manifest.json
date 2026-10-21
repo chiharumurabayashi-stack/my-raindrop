@@ -1,6 +1,6 @@
 {
-  "name": "MyRaindrop",
-  "short_name": "MyRaindrop",
+  "name": "ブックマークマネージャー",
+  "short_name": "ブックマークマネージャー",
   "description": "ブックマークマネージャー",
   "start_url": "./",
   "scope": "./",
