@@ -11,10 +11,10 @@
   "lang": "ja",
   "icons": [
     {
-      "src": "icon.svg",
+      "src": "icon.svg?v=star-2",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
